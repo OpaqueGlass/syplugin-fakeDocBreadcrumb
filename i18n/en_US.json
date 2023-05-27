@@ -1,0 +1,10 @@
+{
+    "setting_nameMaxLength_name": "Maximum length of the document name",
+    "setting_nameMaxLength_desp": "The excess part of the document name will be hided. If set to 0, there is no limit. Unit: Character",
+    "setting_docMaxNum_name": "Maximum number of documents",
+    "setting_docMaxNum_desp": "When a subdocument or sibling document exceeds this value, subsequent documents are not displayed. If set to 0, there is no limit.",
+    "error_initFailed": "HierarchyNavigation Plugin initialization failed, please report this issue to developer at your convenience",
+    "setting_panel_title": "文档面包屑插件设置",
+    "button_save": "Save",
+    "button_cancel": "Cancel"
+}
