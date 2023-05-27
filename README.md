@@ -4,7 +4,7 @@
 
 > Most of this document was translated by Google Translate.
 
-> Current Version: v0.2.0 **Refactor**: Transfer into official plugin system; **New**: Click `>` icon to list and jump to sub-document.
+> Current Version: v0.2.1 **Fix**: Sub-documents menu position; 
 
 ### Quick Start
 

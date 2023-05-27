@@ -2,14 +2,16 @@
   "name": "syplugin-fakeDocBreadcrumb",
   "author": "OpaqueGlass",
   "url": "https://github.com/OpaqueGlass/syplugin-fakeDocBreadcrumb",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "displayName": {
     "default": "fakeDocBreadcrumb",
-    "zh_CN": "(伪)文档面包屑"
+    "zh_CN": "(伪)文档面包屑",
+    "en_US": "Fake Doc Breadcrumb"
   },
   "description": {
     "default": "Add a doc-breadcrumb",
-    "zh_CN": "再添加一个文档面包屑"
+    "zh_CN": "再添加一个文档面包屑",
+    "en_US": "Add a doc-breadcrumb"
   },
   "readme": {
     "default": "README.md",
