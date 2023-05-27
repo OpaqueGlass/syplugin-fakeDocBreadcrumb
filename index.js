@@ -481,7 +481,7 @@ function openHideMenu(event) {
         tempMenu.addItem(tempMenuItemObj);
     }
 
-    tempMenu.open({x: rect.right, y: rect.bottom,isLeft:true});
+    tempMenu.open({x: rect.left, y: rect.bottom,isLeft:false});
 }
 
 
@@ -526,7 +526,7 @@ async function openRelativeMenu(event) {
         tempMenu.addItem(tempMenuItemObj);
     }
 
-    tempMenu.open({x: rect.right, y: rect.bottom,isLeft:true});
+    tempMenu.open({x: rect.right, y: rect.bottom, isLeft:false});
     
 }
 
