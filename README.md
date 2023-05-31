@@ -4,7 +4,7 @@
 
 > Most of this document was translated by Google Translate.
 
-> Current Version: v0.2.1 **Fix**: Sub-documents menu position; 
+> Current Version: v0.2.2 **Fix**: Can't run in siyuan v2.8.10-dev5; **NEW**: Support hide while typing (beta); **Enhancement**: Support hide notebook level (beta);
 
 ### Quick Start
 
