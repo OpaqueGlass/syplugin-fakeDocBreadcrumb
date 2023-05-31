@@ -65,7 +65,7 @@ class FakeDocBreadcrumb extends siyuan.Plugin {
         if (g_tabbarElement == undefined) {
             g_isMobile = true;
         }
-        g_isMobile = siyuan.isMobile();
+        g_isMobile = isMobile();
         // ~~若思源设定非中文，则显示英文~~
         // let siyuanLanguage;
         // try{
@@ -939,6 +939,10 @@ function loadUISettings(formElement) {
     debugPush("UI SETTING", result);
     return result;
 }
+
+function isMobile() {
+    return window.top.document.getElementById("sidebar") ? true : false;
+};
 
 
 module.exports = {
