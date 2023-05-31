@@ -39,13 +39,18 @@ let g_tabbarElement = undefined;
 let g_saveTimeout;
 let g_writeStorage;
 let g_isMobile = false;
+let g_hidedBreadcrumb = false;
 let g_setting = {
     "nameMaxLength": null,
-    "docMaxNum": null
+    "docMaxNum": null,
+    "showNotebook": null,
+    "typeHide": null,
 };
 let g_setting_default = {
     "nameMaxLength": 15,
-    "docMaxNum": 128
+    "docMaxNum": 128,
+    "showNotebook": true,
+    "typeHide": false,
 };
 /**
  * Plugin类
@@ -120,6 +125,7 @@ class FakeDocBreadcrumb extends siyuan.Plugin {
         this.el && this.el.remove();
         removeObserver();
         removeStyle();
+        removeMouseKeyboardListener();
     }
     openSetting() {// 创建dialog
         const settingDialog = new siyuan.Dialog({
@@ -136,7 +142,7 @@ class FakeDocBreadcrumb extends siyuan.Plugin {
             "width": isMobile() ? "92vw":"1040px",
             "height": isMobile() ? "50vw":"540px",
         });
-        console.log("dialog", settingDialog);
+        debugPush("dialog", settingDialog);
         const actionButtons = settingDialog.element.querySelectorAll(`#${CONSTANTS.PLUGIN_NAME}-form-action button`);
         actionButtons[0].addEventListener("click",()=>{settingDialog.destroy()}),
         actionButtons[1].addEventListener("click",()=>{
@@ -146,6 +152,8 @@ class FakeDocBreadcrumb extends siyuan.Plugin {
             Object.assign(g_setting, uiSettings);
             removeStyle();
             setStyle();  
+            removeMouseKeyboardListener();
+            setMouseKeyboardListener();
             debugPush("SAVED");
             settingDialog.destroy();
         });
@@ -158,6 +166,7 @@ class FakeDocBreadcrumb extends siyuan.Plugin {
         settingForm.innerHTML = generateSettingPanelHTML([
             new SettingProperty("docMaxNum", "NUMBER", [0, 1024]),
             new SettingProperty("nameMaxLength", "NUMBER", [0, 1024]),
+            new SettingProperty("typeHide", "SWITCH", null),
         ]);
 
         hello.appendChild(settingForm);
@@ -217,8 +226,10 @@ function initRetry() {
     try {
         removeObserver();
         removeStyle();
+        removeMouseKeyboardListener();
         setObserver();
         setStyle();
+        setMouseKeyboardListener();
         successFlag = true;
         clearTimeout(g_initFailedMsgTimeout);
     }catch(e) {
@@ -327,7 +338,7 @@ async function main(targets) {
     const docDetail = await getCurrentDocDetail(docId);
     debugPush('DETAIL', docDetail);
     // 检查是否重复插入
-    if (window.top.document.querySelector(`.fn__flex-1.protyle:has(.protyle-background[data-node-id="${docId}"]) #fake-doc-breadcrumb`)) return;
+    if (window.top.document.querySelector(`.fn__flex-1.protyle:has(.protyle-background[data-node-id="${docId}"]) .${CONSTANTS.CONTAINER_CLASS_NAME}`)) return;
     // 获取并解析hpath与path
     let pathObject = await parseDocPath(docDetail, docId);
     debugPush("OBJECT", pathObject);
@@ -426,7 +437,7 @@ async function generateElement(pathObjects, docId) {
     barElement.classList.add("protyle-breadcrumb__bar--nowrap");
     barElement.innerHTML = htmlStr;
     result.appendChild(barElement);
-    result.setAttribute("id", "fake-doc-breadcrumb");
+    result.classList.add(CONSTANTS.CONTAINER_CLASS_NAME);
     result.classList.add("protyle-breadcrumb");
     result.style.top = (window.document.querySelector(`.fn__flex-1.protyle:has(.protyle-background[data-node-id="${docId}"]) .protyle-breadcrumb`).clientHeight) + "px";
     // 修改以使得内容下移30px .protyle-content
@@ -592,6 +603,38 @@ async function getSiblingDocuments(docId, parentSqlResult, sqlResult, noParentFl
     return siblingDocs.files;
 }
 
+function setMouseKeyboardListener() {
+    if (g_setting.typeHide) {
+        window.document.addEventListener("mousemove", showDocBreadcrumb);
+        window.document.addEventListener("keydown", hideDocBreadcrumb, true);
+    }
+}
+
+function hideDocBreadcrumb() {
+    if (!g_hidedBreadcrumb) {
+        const fakeBreadcrumb = window.document.querySelectorAll(`.${CONSTANTS.CONTAINER_CLASS_NAME}`);
+        [].forEach.call(fakeBreadcrumb, (e)=>{
+            e.classList.add("og-hide-breadcrumb");
+        });
+        g_hidedBreadcrumb = true;
+    }
+}
+
+function showDocBreadcrumb() {
+    if (g_hidedBreadcrumb) {
+        const fakeBreadcrumb = window.document.querySelectorAll(`.${CONSTANTS.CONTAINER_CLASS_NAME}`);
+        [].forEach.call(fakeBreadcrumb, (e)=>{
+            e.classList.remove("og-hide-breadcrumb");
+        });
+        g_hidedBreadcrumb = false;
+    }
+}
+
+function removeMouseKeyboardListener() {
+    window.document.removeEventListener("mousemove", showDocBreadcrumb);
+    window.document.removeEventListener("keydown", hideDocBreadcrumb, true);
+}
+
 function setStyle() {
     let contentElem = window.top.document.querySelector(`.fn__flex-1.protyle .protyle-content`);
     let contentPaddingTop = parseFloat(window.getComputedStyle(contentElem)?.getPropertyValue("padding-top")?.replace("px")??30);
@@ -604,15 +647,20 @@ function setStyle() {
     style.setAttribute("id", CONSTANTS.STYLE_ID);
     style.innerHTML = `
     
-    #fake-doc-breadcrumb .protyle-breadcrumb__text {
+    .${CONSTANTS.CONTAINER_CLASS_NAME} .protyle-breadcrumb__text {
         margin-left: 0px;
         max-width: 120px;
         overflow: hidden;
         text-overflow: ellipsis;
     }
-    .og-fake-breadcrumb-arrow-span {
+    .og-fake-breadcrumb-arrow-span[data-type=FILE], .og-fake-breadcrumb-arrow-span[data-type=NOTEBOOK] {
         cursor: pointer;
     }
+    .og-hide-breadcrumb {
+        opacity: 0;
+        transition: 1s;
+    }
+
     .og-fake-breadcrumb-arrow-span:hover {
         color: var(--b3-menu-highlight-color);
         background-color: var(--b3-menu-highlight-background);
@@ -628,6 +676,8 @@ function styleEscape(str) {
 function removeStyle() {
     document.getElementById(CONSTANTS.STYLE_ID)?.remove();
 }
+
+/*** Utils ***/
 
 /**
  * 在html中显示文档icon

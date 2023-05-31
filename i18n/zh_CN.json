@@ -1,8 +1,11 @@
 {
     "setting_nameMaxLength_name": "文档名最大长度",
-    "setting_nameMaxLength_desp": "文档名超出的部分将被删除。设置为0则不限制。（单位：字符）",
+    "setting_nameMaxLength_desp": "子文档菜单中文档名超出的部分将被删除。设置为0则不限制。（单位：字符）",
     "setting_docMaxNum_name": "文档最大数量",
     "setting_docMaxNum_desp": "当子文档或同级文档超过该值时，后续文档将不再显示。设置为0则不限制。",
+    "setting_typeHide_name": "输入时隐藏",
+    "setting_typeHide_desp": "开启后，输入时将隐藏文档面包屑，但可能导致性能问题。",
+
     "error_initFailed": "文档面包屑插件初始化失败，如果可以，请向开发者反馈此问题",
     "setting_panel_title": "文档面包屑插件设置",
     "button_save": "保存",
