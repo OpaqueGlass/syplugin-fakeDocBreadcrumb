@@ -45,12 +45,16 @@ let g_setting = {
     "docMaxNum": null,
     "showNotebook": null,
     "typeHide": null,
+    "foldedFrontShow": null,
+    "foldedEndShow": null,
 };
 let g_setting_default = {
     "nameMaxLength": 15,
     "docMaxNum": 128,
     "showNotebook": true,
     "typeHide": false,
+    "foldedFrontShow": 2,
+    "foldedEndShow": 3,
 };
 /**
  * Plugin类
@@ -166,7 +170,10 @@ class FakeDocBreadcrumb extends siyuan.Plugin {
         settingForm.innerHTML = generateSettingPanelHTML([
             new SettingProperty("docMaxNum", "NUMBER", [0, 1024]),
             new SettingProperty("nameMaxLength", "NUMBER", [0, 1024]),
+            new SettingProperty("showNotebook", "SWITCH", null),
             new SettingProperty("typeHide", "SWITCH", null),
+            // new SettingProperty("foldedFrontShow", "NUMBER", [0, 8]),
+            // new SettingProperty("foldedEndShow", "NUMBER", [0, 8]),
         ]);
 
         hello.appendChild(settingForm);
@@ -395,15 +402,30 @@ async function generateElement(pathObjects, docId) {
     </span>
     `;
     let htmlStr = "";
+    let countDebug = 0;
+    // 折叠隐藏自
+    const foldStartAt = g_setting.showNotebook ? g_setting.foldedFrontShow : 
+        g_setting.foldedFrontShow + 1;
+    // 折叠隐藏结束于
+    const foldEndAt = pathObjects.length - g_setting.foldedEndShow - 1;
     for (let i = 0; i < pathObjects.length; i++) {
+        countDebug++;
+        if (countDebug > 200) {
+            throw new Error(">_<出现死循环");
+        }
         // 层级过深时，对中间内容加以限制
-        if (pathObjects.length > 5 && i >= 2 && i < pathObjects.length - 3) {
+        if (pathObjects.length > 5 && i >= foldStartAt && i <= foldEndAt) {
             let hidedIds = new Array();
             let hidedNames = new Array();
-            for (let j = 2; j < pathObjects.length - 3; j++) {
+            let hideFrom = foldStartAt;
+            // 过滤笔记本，因为笔记本不可点击
+            if (hideFrom <= 0) hideFrom = 1;
+            for (let j = hideFrom;
+                 j <= foldEndAt; j++) {
                 hidedIds.push(pathObjects[j].id);
                 hidedNames.push(pathObjects[j].name);
             }
+            debugPush(hidedIds, hidedNames);
             htmlStr += oneItem
                 .replaceAll("%0%", JSON.stringify(hidedIds).replaceAll(`"`, `'`))
                 .replaceAll("%1%", "···")
@@ -411,15 +433,19 @@ async function generateElement(pathObjects, docId) {
                 .replaceAll("%3%", "...")
                 .replaceAll("%NAMES%", JSON.stringify(hidedNames).replaceAll(`"`, `'`));
             htmlStr += divideArrow.replaceAll("%4%", "HIDE");
-            i = pathObjects.length - 4;
+            i = foldEndAt;
+            // 避免为负数，但好像没啥用
+            if (i < 0) i = 0;
             continue;
         }
         let onePathObject = pathObjects[i];
-        htmlStr += oneItem
-            .replaceAll("%0%", onePathObject.id)
-            .replaceAll("%1%", onePathObject.name)
-            .replaceAll("%2%", onePathObject.name)
-            .replaceAll("%3%", onePathObject.type);
+        if (g_setting.showNotebook && i == 0 || i != 0) {
+            htmlStr += oneItem
+                .replaceAll("%0%", onePathObject.id)
+                .replaceAll("%1%", onePathObject.name)
+                .replaceAll("%2%", onePathObject.name)
+                .replaceAll("%3%", onePathObject.type);
+        }
         htmlStr += divideArrow
             .replaceAll("%4%", onePathObject.type)
             .replaceAll("%5%", pathObjects[i].id);
@@ -537,7 +563,7 @@ async function openRelativeMenu(event) {
         tempMenu.addItem(tempMenuItemObj);
     }
 
-    tempMenu.open({x: rect.right, y: rect.bottom, isLeft:false});
+    tempMenu.open({x: rect.left, y: rect.bottom, isLeft:false});
     
 }
 
@@ -610,8 +636,9 @@ function setMouseKeyboardListener() {
     }
 }
 
-function hideDocBreadcrumb() {
+function hideDocBreadcrumb(event) {
     if (!g_hidedBreadcrumb) {
+        if (event.ctrlKey || event.shiftKey || event.altKey) return;
         const fakeBreadcrumb = window.document.querySelectorAll(`.${CONSTANTS.CONTAINER_CLASS_NAME}`);
         [].forEach.call(fakeBreadcrumb, (e)=>{
             e.classList.add("og-hide-breadcrumb");
@@ -857,6 +884,9 @@ function generateSettingPanelHTML(settingObjectArray) {
     for (let oneSettingProperty of settingObjectArray) {
         let inputElemStr = "";
         oneSettingProperty.desp = oneSettingProperty.desp?.replace(new RegExp("<code>", "g"), "<code class='fn__code'>");
+        if (oneSettingProperty.name.includes("🧪")) {
+            oneSettingProperty.desp = language["setting_experimental"] + oneSettingProperty.desp;
+        }
         let temp = `
         <label class="fn__flex b3-label">
             <div class="fn__flex-1">
