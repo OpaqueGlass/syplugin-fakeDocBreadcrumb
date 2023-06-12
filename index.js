@@ -80,7 +80,7 @@ class FakeDocBreadcrumb extends siyuan.Plugin {
         // try{
         //     siyuanLanguage = window.top.siyuan.config.lang;
         // }catch (err){
-        //     console.warn("读取语言信息失败");
+        //     warnPush("读取语言信息失败");
         // }
         // if (siyuanLanguage != "zh_CN" && siyuanLanguage != undefined) {
         //     language = en_US;
@@ -104,7 +104,7 @@ class FakeDocBreadcrumb extends siyuan.Plugin {
                 // let settingData = JSON.parse(settingCache);
                 Object.assign(g_setting, settingCache);
             }catch(e){
-                console.warn("og-fdb载入配置时发生错误",e);
+                warnPush("og-fdb载入配置时发生错误",e);
             }
             // console.log("LOADED",settingData);
             // console.log("LOADED_R", g_setting);
@@ -113,11 +113,11 @@ class FakeDocBreadcrumb extends siyuan.Plugin {
             //     setObserver();
             //     setStyle();
             // }catch(e) {
-            //     console.error("文档导航插件首次初始化失败", e);
+            //     errorPush("文档导航插件首次初始化失败", e);
                 g_initRetryInterval = setInterval(initRetry, 2500);
             // }
         }, (e)=> {
-            console.warn("配置文件读入失败", e);
+            warnPush("配置文件读入失败", e);
         });
 
         g_writeStorage = this.saveData;
@@ -136,7 +136,7 @@ class FakeDocBreadcrumb extends siyuan.Plugin {
             "title": language["setting_panel_title"],
             "content": `
             <div class="b3-dialog__content" style="flex: 1;">
-                <div id="${CONSTANTS.PLUGIN_NAME}-form-content" style="overflow: scroll;"></div>
+                <div id="${CONSTANTS.PLUGIN_NAME}-form-content" style="overflow: auto;"></div>
             </div>
             <div class="b3-dialog__action" id="${CONSTANTS.PLUGIN_NAME}-form-action" style="max-height: 40px">
                 <button class="b3-button b3-button--cancel">${language["button_cancel"]}</button><div class="fn__space"></div>
@@ -186,7 +186,8 @@ class FakeDocBreadcrumb extends siyuan.Plugin {
 // debug push
 let g_DEBUG = 0; // 2 写入前台 1 只控制台
 let g_DEBUG_ELEM = null;
-function debugPush(str, ...args) {
+
+function commonPush(str, ...args) {
     if (g_DEBUG == 0 && (window["OpaqueGlassDebug"] != true)) return;
     let parsedArgsStr = "";
     for (let arg of args) {
@@ -194,8 +195,26 @@ function debugPush(str, ...args) {
     }
     if (g_DEBUG_ELEM && g_DEBUG > 1) {   
         g_DEBUG_ELEM.innerText = parsedArgsStr;
-    }else{
+        return false;
+    }
+    return true;
+}
+
+function debugPush(str, ...args) {
+    if (commonPush(str, ...args)) {
         console.log("ogdb "+str, ...args);
+    }
+}
+
+function errorPush(str, ... args) {
+    if (commonPush(str, ...args)) {
+        console.error("ogdb "+str, ...args);
+    }
+}
+
+function warnPush(str, ... args) {
+    if (commonPush(str, ...args)) {
+        console.warn("ogdb "+str, ...args);
     }
 }
 
@@ -240,11 +259,11 @@ function initRetry() {
         successFlag = true;
         clearTimeout(g_initFailedMsgTimeout);
     }catch(e) {
-        console.warn("文档面包屑插件初始化失败（重试中）", e);
+        warnPush("文档面包屑插件初始化失败（重试中）", e);
     }
     if (successFlag) {
         clearInterval(g_initRetryInterval);
-        console.warn("文档面包屑插件初始化【重试成功】");
+        warnPush("文档面包屑插件初始化【重试成功】");
     }
 }
 
@@ -263,7 +282,7 @@ function setObserver() {
                         // TODO: 改为动态获取id
                         await main([mutation.target]);
                     }catch(err) {
-                        console.error(err);
+                        errorPush(err);
                     }
                     console.timeEnd(g_TIMER_LABLE_NAME_COMPARE);
                 }, Math.round(Math.random() * CONSTANTS.OBSERVER_RANDOM_DELAY) + CONSTANTS.OBSERVER_RANDOM_DELAY_ADD);
@@ -283,7 +302,7 @@ function setObserver() {
                     // TODO: 改为动态获取id
                     await main([mutation.target]);
                 }catch(err) {
-                    console.error(err);
+                    errorPush(err);
                 }
                 console.timeEnd(g_TIMER_LABLE_NAME_COMPARE);
             }, Math.round(Math.random() * CONSTANTS.OBSERVER_RANDOM_DELAY) + CONSTANTS.OBSERVER_RANDOM_DELAY_ADD);
@@ -324,7 +343,7 @@ function observerRetry() {
                         // TODO
                         await main(element.children);
                     }catch (err) {
-                        console.error(err);
+                        errorPush(err);
                     }
                     // console.timeEnd(g_TIMER_LABLE_NAME_COMPARE);
                 }, Math.round(Math.random() * CONSTANTS.OBSERVER_RANDOM_DELAY) + CONSTANTS.OBSERVER_RANDOM_DELAY_ADD);
@@ -344,6 +363,7 @@ async function main(targets) {
     const docId = getCurrentDocIdF();
     const docDetail = await getCurrentDocDetail(docId);
     debugPush('DETAIL', docDetail);
+    if (!isValidStr(docDetail)) return;
     // 检查是否重复插入
     if (window.top.document.querySelector(`.fn__flex-1.protyle:has(.protyle-background[data-node-id="${docId}"]) .${CONSTANTS.CONTAINER_CLASS_NAME}`)) return;
     // 获取并解析hpath与path
@@ -663,11 +683,11 @@ function removeMouseKeyboardListener() {
 }
 
 function setStyle() {
-    let contentElem = window.top.document.querySelector(`.fn__flex-1.protyle .protyle-content`);
-    let contentPaddingTop = parseFloat(window.getComputedStyle(contentElem)?.getPropertyValue("padding-top")?.replace("px")??30);
-    debugPush(contentPaddingTop);
-    let newPaddingTop = contentPaddingTop + window.document.querySelector(`.fn__flex-1.protyle .protyle-breadcrumb`)?.clientHeight ?? 30;
-    debugPush("new padding top", newPaddingTop);
+    // let contentElem = window.top.document.querySelector(`.fn__flex-1.protyle .protyle-content`);
+    // let contentPaddingTop = parseFloat(window.getComputedStyle(contentElem)?.getPropertyValue("padding-top")?.replace("px")??30);
+    // debugPush(contentPaddingTop);
+    // let newPaddingTop = contentPaddingTop + window.document.querySelector(`.fn__flex-1.protyle .protyle-breadcrumb`)?.clientHeight ?? 30;
+    // debugPush("new padding top", newPaddingTop);
 
     const head = document.getElementsByTagName('head')[0];
     const style = document.createElement('style');
@@ -735,7 +755,7 @@ let emojiIconHandler = function (iconString, hasChild = false) {
         });
         return result;
     } catch (err) {
-        console.error("emoji处理时发生错误", iconString, err);
+        errorPush("emoji处理时发生错误", iconString, err);
         return hasChild ? "📑" : "📄";
     }
 }
@@ -808,7 +828,7 @@ function getCurrentDocIdF() {
             }
             thisDocId = temp;
         }catch(e){
-            console.error(e);
+            errorPush(e);
             temp = null;
         }
     }
@@ -887,6 +907,17 @@ function generateSettingPanelHTML(settingObjectArray) {
         if (oneSettingProperty.name.includes("🧪")) {
             oneSettingProperty.desp = language["setting_experimental"] + oneSettingProperty.desp;
         }
+        const tempElem = document.createElement("label");
+        tempElem.classList.add("fn__flex", "b3-label");
+        const inLabelDiv = document.createElement("div");
+        inLabelDiv.classList.add("fn__flex-1");
+        inLabelDiv.innerText = oneSettingProperty.name;
+
+        const descriptionElement = document.createElement('div');
+        descriptionElement.classList.add('b3-label__text');
+        descriptionElement.textContent = oneSettingProperty.desp ?? "";
+        inLabelDiv.appendChild(descriptionElement);
+        
         let temp = `
         <label class="fn__flex b3-label">
             <div class="fn__flex-1">
