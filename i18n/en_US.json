@@ -7,6 +7,8 @@
     "setting_typeHide_desp": "When enabled, the document breadcrumbs will be hidden while typing, but it may cause performance issues. ",
     "setting_showNotebook_name": "🧪Show the notebook level in document breadcrumb",
     "setting_showNotebook_desp": "",
+    "setting_oneLineBreadcrumb_name": "🧪Display the document breadcrumb on the same line as the block breadcrumb",
+    "setting_oneLineBreadcrumb_desp": "",
     "setting_foldedFrontShow_name": "🧪Keep the first N levels",
     "setting_foldedFrontShow_desp": "",
     "setting_foldedEndShow_name": "🧪Keep the last N levels",

@@ -47,6 +47,7 @@ let g_setting = {
     "typeHide": null,
     "foldedFrontShow": null,
     "foldedEndShow": null,
+    "oneLineBreadcrumb": null,
 };
 let g_setting_default = {
     "nameMaxLength": 15,
@@ -55,6 +56,7 @@ let g_setting_default = {
     "typeHide": false,
     "foldedFrontShow": 2,
     "foldedEndShow": 3,
+    "oneLineBreadcrumb": false,
 };
 /**
  * Plugin类
@@ -172,6 +174,7 @@ class FakeDocBreadcrumb extends siyuan.Plugin {
             new SettingProperty("nameMaxLength", "NUMBER", [0, 1024]),
             new SettingProperty("showNotebook", "SWITCH", null),
             new SettingProperty("typeHide", "SWITCH", null),
+            new SettingProperty("oneLineBreadcrumb", "SWITCH", null)
             // new SettingProperty("foldedFrontShow", "NUMBER", [0, 8]),
             // new SettingProperty("foldedEndShow", "NUMBER", [0, 8]),
         ]);
@@ -365,7 +368,10 @@ async function main(targets) {
     debugPush('DETAIL', docDetail);
     if (!isValidStr(docDetail)) return;
     // 检查是否重复插入
-    if (window.top.document.querySelector(`.fn__flex-1.protyle:has(.protyle-background[data-node-id="${docId}"]) .${CONSTANTS.CONTAINER_CLASS_NAME}`)) return;
+    if (window.top.document.querySelector(`.fn__flex-1.protyle:has(.protyle-background[data-node-id="${docId}"]) .${CONSTANTS.CONTAINER_CLASS_NAME}`)) {
+        debugPush("重复插入，操作停止");
+        return;
+    }
     // 获取并解析hpath与path
     let pathObject = await parseDocPath(docDetail, docId);
     debugPush("OBJECT", pathObject);
@@ -485,14 +491,19 @@ async function generateElement(pathObjects, docId) {
     result.appendChild(barElement);
     result.classList.add(CONSTANTS.CONTAINER_CLASS_NAME);
     result.classList.add("protyle-breadcrumb");
-    result.style.top = (window.document.querySelector(`.fn__flex-1.protyle:has(.protyle-background[data-node-id="${docId}"]) .protyle-breadcrumb`).clientHeight) + "px";
+    // result.style.top = (window.document.querySelector(`.fn__flex-1.protyle:has(.protyle-background[data-node-id="${docId}"]) .protyle-breadcrumb`).clientHeight) + "px";
     // 修改以使得内容下移30px .protyle-content
     return result;
     
 }
 
 function setAndApply(element, docId) {
-    window.top.document.querySelector(`.fn__flex-1.protyle:has(.protyle-background[data-node-id="${docId}"]) .protyle-breadcrumb`).insertAdjacentElement("beforebegin",element);
+    if (g_setting.oneLineBreadcrumb) {
+        window.top.document.querySelector(`.fn__flex-1.protyle:has(.protyle-background[data-node-id="${docId}"]) .protyle-breadcrumb__bar`).insertAdjacentElement("beforebegin",element);
+    }else{
+        window.top.document.querySelector(`.fn__flex-1.protyle:has(.protyle-background[data-node-id="${docId}"]) .protyle-breadcrumb`).insertAdjacentElement("beforebegin",element);
+    }
+    
     [].forEach.call(window.document.querySelectorAll(`.fake-breadcrumb-click[data-type="FILE"]`), (elem)=>{
         elem.removeEventListener("click", openRefLink);
         elem.addEventListener("click", openRefLink);
@@ -700,6 +711,13 @@ function setStyle() {
         overflow: hidden;
         text-overflow: ellipsis;
     }
+
+    .protyle-breadcrumb__bar protyle-breadcrumb__bar--nowrap
+
+    .${CONSTANTS.CONTAINER_CLASS_NAME} {
+        display: block !important;
+    }
+
     .og-fake-breadcrumb-arrow-span[data-type=FILE], .og-fake-breadcrumb-arrow-span[data-type=NOTEBOOK] {
         cursor: pointer;
     }

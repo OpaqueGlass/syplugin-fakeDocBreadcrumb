@@ -7,6 +7,8 @@
     "setting_typeHide_desp": "开启后，输入时将隐藏文档面包屑，但可能导致性能问题。",
     "setting_showNotebook_name": "🧪显示笔记本层级",
     "setting_showNotebook_desp": "",
+    "setting_oneLineBreadcrumb_name": "🧪与块面包屑在同一行显示",
+    "setting_oneLineBreadcrumb_desp": "",
     "setting_foldedFrontShow_name": "🧪保留靠前的N个",
     "setting_foldedFrontShow_desp": "",
     "setting_foldedEndShow_name": "🧪保留靠后的N个",
