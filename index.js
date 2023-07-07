@@ -9,6 +9,7 @@ const siyuan = require('siyuan');
 let g_switchTabObserver; // 页签切换与新建监视器
 let g_windowObserver; // 窗口监视器
 let g_displayHideTimeout; // 显示/消失监视器
+let g_mutex = 0;
 const CONSTANTS = {
     RANDOM_DELAY: 300, // 插入挂件的延迟最大值，300（之后会乘以10）对应最大延迟3秒
     OBSERVER_RANDOM_DELAY: 500, // 插入链接、引用块和自定义时，在OBSERVER_RANDOM_DELAY_ADD的基础上增加延时，单位毫秒
@@ -48,6 +49,8 @@ let g_setting = {
     "foldedFrontShow": null,
     "foldedEndShow": null,
     "oneLineBreadcrumb": null,
+    "timelyUpdate": null, // 及时响应更新
+    "immediatelyUpdate": null, // 实时响应更新
 };
 let g_setting_default = {
     "nameMaxLength": 15,
@@ -57,6 +60,8 @@ let g_setting_default = {
     "foldedFrontShow": 2,
     "foldedEndShow": 3,
     "oneLineBreadcrumb": false,
+    "timelyUpdate": true, // 及时响应更新
+    "immediatelyUpdate": false, // 实时响应更新
 };
 /**
  * Plugin类
@@ -174,9 +179,9 @@ class FakeDocBreadcrumb extends siyuan.Plugin {
             new SettingProperty("nameMaxLength", "NUMBER", [0, 1024]),
             new SettingProperty("showNotebook", "SWITCH", null),
             new SettingProperty("typeHide", "SWITCH", null),
-            new SettingProperty("oneLineBreadcrumb", "SWITCH", null)
-            // new SettingProperty("foldedFrontShow", "NUMBER", [0, 8]),
-            // new SettingProperty("foldedEndShow", "NUMBER", [0, 8]),
+            new SettingProperty("oneLineBreadcrumb", "SWITCH", null),
+            new SettingProperty("foldedFrontShow", "NUMBER", [0, 8]),
+            new SettingProperty("foldedEndShow", "NUMBER", [0, 8]),
         ]);
 
         hello.appendChild(settingForm);
@@ -362,24 +367,58 @@ function removeObserver() {
 }
 
 async function main(targets) {
-    // 获取当前文档id
-    const docId = getCurrentDocIdF();
-    const docDetail = await getCurrentDocDetail(docId);
-    debugPush('DETAIL', docDetail);
-    if (!isValidStr(docDetail)) return;
-    // 检查是否重复插入
-    if (window.top.document.querySelector(`.fn__flex-1.protyle:has(.protyle-background[data-node-id="${docId}"]) .${CONSTANTS.CONTAINER_CLASS_NAME}`)) {
-        debugPush("重复插入，操作停止");
-        return;
+    if (g_isMobile) return;
+    let retryCount = 0;
+    let success = false;
+    while (retryCount < 20) {
+        retryCount ++ ;
+        try {
+            if (g_mutex > 0) {
+                return;
+            }
+            g_mutex++;
+            // 获取当前文档id
+            const docId = getCurrentDocIdF();
+            const docDetail = await getCurrentDocDetail(docId);
+            debugPush('DETAIL', docDetail);
+            if (!isValidStr(docDetail)) {
+                throw new Error("找不到当前打开的文档");
+            }
+            // 检查是否重复插入
+            if (!g_setting.timelyUpdate &&  window.top.document.querySelector(`.fn__flex-1.protyle:has(.protyle-background[data-node-id="${docId}"]) .${CONSTANTS.CONTAINER_CLASS_NAME}`)) {
+                debugPush("重复插入，操作停止");
+                return;
+            }
+            // 获取并解析hpath与path
+            let pathObject = await parseDocPath(docDetail, docId);
+            debugPush("OBJECT", pathObject);
+            // 组合显示元素
+            let element = await generateElement(pathObject, docId);
+            debugPush("ELEMT", element);
+            // 插入显示元素和设置监听
+            setAndApply(element, docId);
+            success = true;
+        }catch(err){
+            warnPush(err);
+        }finally{
+            g_mutex = 0;
+        }
+        if (!success) {
+            debugPush(`重试中${retryCount}，休息一会儿后重新尝试`);
+            await sleep(200);
+        } else {
+            break;
+        }
     }
-    // 获取并解析hpath与path
-    let pathObject = await parseDocPath(docDetail, docId);
-    debugPush("OBJECT", pathObject);
-    // 组合显示元素
-    let element = await generateElement(pathObject, docId);
-    debugPush("ELEMT", element);
-    // 插入显示元素和设置监听
-    setAndApply(element, docId);
+    if (!success) {
+        throw new Error("已经重试20次，仍然存在错误");
+    }
+
+    
+}
+
+function sleep(time){
+    return new Promise((resolve) => setTimeout(resolve, time));
 }
 
 async function parseDocPath(docDetail) {
@@ -498,11 +537,19 @@ async function generateElement(pathObjects, docId) {
 }
 
 function setAndApply(element, docId) {
+    // TODO: 移除已有的面包屑
+    const tempOldElem = window.top.document.querySelector(`.fn__flex-1.protyle:has(.protyle-background[data-node-id="${docId}"]) .og-fake-doc-breadcrumb-container`);
+    if (tempOldElem) {
+        tempOldElem.remove();
+        debugPush("移除原有面包屑成功");
+    }
+
     if (g_setting.oneLineBreadcrumb) {
         window.top.document.querySelector(`.fn__flex-1.protyle:has(.protyle-background[data-node-id="${docId}"]) .protyle-breadcrumb__bar`).insertAdjacentElement("beforebegin",element);
     }else{
         window.top.document.querySelector(`.fn__flex-1.protyle:has(.protyle-background[data-node-id="${docId}"]) .protyle-breadcrumb`).insertAdjacentElement("beforebegin",element);
     }
+    debugPush("重写面包屑成功");
     
     [].forEach.call(window.document.querySelectorAll(`.fake-breadcrumb-click[data-type="FILE"]`), (elem)=>{
         elem.removeEventListener("click", openRefLink);
@@ -851,7 +898,8 @@ function getCurrentDocIdF() {
         }
     }
     if (!thisDocId) {
-        thisDocId = window.top.document.querySelector(".protyle-background")?.getAttribute("data-node-id");
+        thisDocId = window.top.document.querySelector(".protyle.fn__flex-1:not(.fn__none) .protyle-background")?.getAttribute("data-node-id");
+        debugPush("thisDocId by background must match,  id", thisDocId);
     }
     return thisDocId;
 }
