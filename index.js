@@ -110,6 +110,7 @@ class FakeDocBreadcrumb extends siyuan.Plugin {
                 debugPush("载入配置中",settingCache);
                 // let settingData = JSON.parse(settingCache);
                 Object.assign(g_setting, settingCache);
+                this.eventBusInnerHandler();
             }catch(e){
                 warnPush("og-fdb载入配置时发生错误",e);
             }
@@ -137,6 +138,7 @@ class FakeDocBreadcrumb extends siyuan.Plugin {
         removeObserver();
         removeStyle();
         removeMouseKeyboardListener();
+        eventBusInnerHandler();
     }
     openSetting() {// 创建dialog
         const settingDialog = new siyuan.Dialog({
@@ -165,6 +167,7 @@ class FakeDocBreadcrumb extends siyuan.Plugin {
             setStyle();  
             removeMouseKeyboardListener();
             setMouseKeyboardListener();
+            this.eventBusInnerHandler();
             debugPush("SAVED");
             settingDialog.destroy();
         });
@@ -182,10 +185,20 @@ class FakeDocBreadcrumb extends siyuan.Plugin {
             new SettingProperty("oneLineBreadcrumb", "SWITCH", null),
             new SettingProperty("foldedFrontShow", "NUMBER", [0, 8]),
             new SettingProperty("foldedEndShow", "NUMBER", [0, 8]),
+            new SettingProperty("immediatelyUpdate", "SWITCH", null),
         ]);
 
         hello.appendChild(settingForm);
         settingDialog.element.querySelector(`#${CONSTANTS.PLUGIN_NAME}-form-content`).appendChild(hello);
+    }
+
+    
+    eventBusInnerHandler() {
+        if (g_setting.immediatelyUpdate) {
+            this.eventBus.on("ws-main", eventBusHandler);
+        }else{
+            this.eventBus.off("ws-main", eventBusHandler);
+        }
     }
 }
 
@@ -364,6 +377,21 @@ function observerRetry() {
 function removeObserver() {
     g_switchTabObserver?.disconnect();
     g_windowObserver?.disconnect();
+}
+
+async function eventBusHandler(detail) {
+    // console.log(detail);
+    const cmdType = ["moveDoc", "rename", "removeDoc"];
+    if (cmdType.indexOf(detail.detail.cmd) != -1) {
+        try {
+            debugPush("等候数据库刷新");
+            await sleep(9000);
+            debugPush("由 立即更新 触发");
+            main();
+        }catch(err) {
+            errorPush(err);
+        }
+    }
 }
 
 async function main(targets) {

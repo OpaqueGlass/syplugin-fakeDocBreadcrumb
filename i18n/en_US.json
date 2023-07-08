@@ -9,10 +9,13 @@
     "setting_showNotebook_desp": "",
     "setting_oneLineBreadcrumb_name": "🧪Display the document breadcrumb on the same line as the block breadcrumb",
     "setting_oneLineBreadcrumb_desp": "",
-    "setting_foldedFrontShow_name": "🧪Keep the first N levels",
+    "setting_foldedFrontShow_name": "🧪Keep the first N documents",
     "setting_foldedFrontShow_desp": "",
-    "setting_foldedEndShow_name": "🧪Keep the last N levels",
+    "setting_foldedEndShow_name": "🧪Keep the last N documents",
     "setting_foldedEndShow_desp": "",
+    "setting_immediatelyUpdate_name": "🧪❌Update immediately",
+    "setting_immediatelyUpdate_desp": "Due to reading from the database cache, even if this option is enabled, it may not immediately respond to document renaming and other updates. Due to technical reasons, there may be performance issues such as lags when processing large amounts of input. Please use with caution.",
+
     "setting_experimental": "(Experimental Feature. UNSTABLE) ",
 
     "error_initFailed": "HierarchyNavigation Plugin initialization failed, please report this issue to developer at your convenience",
