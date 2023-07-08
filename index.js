@@ -579,15 +579,15 @@ function setAndApply(element, docId) {
     }
     debugPush("重写面包屑成功");
     
-    [].forEach.call(window.document.querySelectorAll(`.fake-breadcrumb-click[data-type="FILE"]`), (elem)=>{
+    [].forEach.call(window.document.querySelectorAll(`.og-fake-doc-breadcrumb-container .fake-breadcrumb-click[data-type="FILE"]`), (elem)=>{
         elem.removeEventListener("click", openRefLink);
         elem.addEventListener("click", openRefLink);
     });
-    [].forEach.call(window.document.querySelectorAll(`.fake-breadcrumb-click[data-type="..."]`), (elem)=>{
+    [].forEach.call(window.document.querySelectorAll(`.og-fake-doc-breadcrumb-container .fake-breadcrumb-click[data-type="..."]`), (elem)=>{
         elem.removeEventListener("click", openHideMenu);
         elem.addEventListener("click", openHideMenu);
     });
-    [].forEach.call(window.document.querySelectorAll(`.og-fake-breadcrumb-arrow-span[data-type="FILE"], .og-fake-breadcrumb-arrow-span[data-type="NOTEBOOK"]`), (elem)=>{
+    [].forEach.call(window.document.querySelectorAll(`.og-fake-doc-breadcrumb-container .og-fake-breadcrumb-arrow-span[data-type="FILE"], .og-fake-breadcrumb-arrow-span[data-type="NOTEBOOK"]`), (elem)=>{
         elem.removeEventListener("click", openRelativeMenu);
         elem.addEventListener("click", openRelativeMenu);
     });

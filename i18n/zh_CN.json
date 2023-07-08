@@ -14,7 +14,7 @@
     "setting_foldedEndShow_name": "🧪始终保留靠后的N个文档",
     "setting_foldedEndShow_desp": "",
     "setting_immediatelyUpdate_name": "🧪❌立即更新",
-    "setting_immediatelyUpdate_desp": "【由于读取的是数据库缓存，即使开启此选项也无法立即响应文档重命名等情况】由于技术原因，可能导致大量输入时卡顿等性能问题，请谨慎启用。",
+    "setting_immediatelyUpdate_desp": "【由于读取的是数据库缓存，即使开启此选项也只能在约10秒后响应文档重命名等情况】由于技术原因，可能导致大量输入时卡顿等性能问题，请谨慎启用。",
 
     "setting_experimental": "（实验性功能，不稳定）",
 
