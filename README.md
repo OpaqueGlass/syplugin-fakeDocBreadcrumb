@@ -4,7 +4,7 @@
 
 > Most of this document was translated by Google Translate.
 
-> Current Version: v0.2.3 **Fix**: Fix the issue of no tab page during startup or encountering an error with custom tab page.;
+> Current Version: v0.2.4 **New addition**: Support display the document breadcrumb on the same line as the block breadcrumb; **Improvement**: Refresh the breadcrumb after switching tabs; **Improvement**: Add some new settings options.
 
 ### Quick Start
 
