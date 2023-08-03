@@ -558,6 +558,9 @@ async function generateElement(pathObjects, docId) {
     result.appendChild(barElement);
     result.classList.add(CONSTANTS.CONTAINER_CLASS_NAME);
     result.classList.add("protyle-breadcrumb");
+    let spaceElement = document.createElement("span");
+    spaceElement.classList.add("protyle-breadcrumb__space");
+    result.appendChild(spaceElement);
     // result.style.top = (window.document.querySelector(`.fn__flex-1.protyle:has(.protyle-background[data-node-id="${docId}"]) .protyle-breadcrumb`).clientHeight) + "px";
     // 修改以使得内容下移30px .protyle-content
     return result;
