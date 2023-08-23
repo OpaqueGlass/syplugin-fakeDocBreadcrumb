@@ -72,15 +72,15 @@ class FakeDocBreadcrumb extends siyuan.Plugin {
 
     onload() {
         // 设置语言
-        try {
-            g_tabbarElement = window.siyuan.layout.centerLayout.element.querySelectorAll("[data-type='wnd'] ul.layout-tab-bar");
-        }catch(err) {
-            console.log(`og-fdb启动测试未通过`);
-            g_tabbarElement = undefined;
-        }
-        if (g_tabbarElement == undefined) {
-            g_isMobile = true;
-        }
+        // try {
+        //     g_tabbarElement = window.siyuan.layout.centerLayout.element.querySelectorAll("[data-type='wnd'] ul.layout-tab-bar");
+        // }catch(err) {
+        //     console.log(`og-fdb启动测试未通过`);
+        //     g_tabbarElement = undefined;
+        // }
+        // if (g_tabbarElement == undefined) {
+        //     g_isMobile = true;
+        // }
         g_isMobile = isMobile();
         // ~~若思源设定非中文，则显示英文~~
         // let siyuanLanguage;
@@ -122,7 +122,7 @@ class FakeDocBreadcrumb extends siyuan.Plugin {
             //     setStyle();
             // }catch(e) {
             //     errorPush("文档导航插件首次初始化失败", e);
-                g_initRetryInterval = setInterval(initRetry, 2500);
+                // g_initRetryInterval = setInterval(initRetry, 2500);
             // }
         }, (e)=> {
             warnPush("配置文件读入失败", e);
@@ -130,7 +130,11 @@ class FakeDocBreadcrumb extends siyuan.Plugin {
 
         g_writeStorage = this.saveData;
         
-        debugPush('FakeDocBradcrumbPluginInited',this.i18n, language);
+        debugPush('FakeDocBradcrumbPluginInited');
+    }
+
+    onLayoutReady() {
+        initRetry();
     }
 
     onunload() {
@@ -139,6 +143,7 @@ class FakeDocBreadcrumb extends siyuan.Plugin {
         removeStyle();
         removeMouseKeyboardListener();
         this.eventBusInnerHandler();
+        // TODO: 移除已经插入的部分
     }
     openSetting() {// 创建dialog
         const settingDialog = new siyuan.Dialog({
@@ -293,11 +298,11 @@ function initRetry() {
         successFlag = true;
         clearTimeout(g_initFailedMsgTimeout);
     }catch(e) {
-        warnPush("文档面包屑插件初始化失败（重试中）", e);
+        errorPush("文档面包屑插件初始化失败", e);
     }
     if (successFlag) {
         clearInterval(g_initRetryInterval);
-        warnPush("文档面包屑插件初始化【重试成功】");
+        logPush("文档面包屑插件初始化成功");
     }
 }
 
@@ -324,7 +329,11 @@ function setObserver() {
         });
         g_switchTabObserver.observe(window.document.querySelector(".protyle-background[data-node-id]"), {"attributes": true, "attributeFilter": ["data-node-id"]});
         debugPush("MOBILE_LOADED");
-        main();
+        try {
+            main();
+        } catch(err) {
+            errorPush(err);
+        }
         return;
     }
     g_switchTabObserver = new MutationObserver(async (mutationList) => {
@@ -411,7 +420,7 @@ async function main(targets) {
     if (g_isMobile) return;
     let retryCount = 0;
     let success = false;
-    while (retryCount < 20) {
+    while (retryCount < 2) {
         retryCount ++ ;
         try {
             if (g_mutex > 0) {
@@ -452,7 +461,7 @@ async function main(targets) {
         }
     }
     if (!success) {
-        throw new Error("已经重试20次，仍然存在错误");
+        throw new Error("已经重试2次，仍然存在错误");
     }
 
     
