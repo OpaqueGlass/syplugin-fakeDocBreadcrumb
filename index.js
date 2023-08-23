@@ -51,6 +51,8 @@ let g_setting = {
     "oneLineBreadcrumb": null,
     "timelyUpdate": null, // 及时响应更新
     "immediatelyUpdate": null, // 实时响应更新
+    "allowFloatWindow": null,
+    "usePluginArrow": null
 };
 let g_setting_default = {
     "nameMaxLength": 15,
@@ -62,6 +64,8 @@ let g_setting_default = {
     "oneLineBreadcrumb": false,
     "timelyUpdate": true, // 及时响应更新
     "immediatelyUpdate": false, // 实时响应更新
+    "allowFloatWindow": false, // 触发浮窗
+    "usePluginArrow": false, // 使用挂件>箭头
 };
 /**
  * Plugin类
@@ -71,39 +75,18 @@ class FakeDocBreadcrumb extends siyuan.Plugin {
     tabOpenObserver =  null;
 
     onload() {
-        // 设置语言
-        // try {
-        //     g_tabbarElement = window.siyuan.layout.centerLayout.element.querySelectorAll("[data-type='wnd'] ul.layout-tab-bar");
-        // }catch(err) {
-        //     console.log(`og-fdb启动测试未通过`);
-        //     g_tabbarElement = undefined;
-        // }
-        // if (g_tabbarElement == undefined) {
-        //     g_isMobile = true;
-        // }
         g_isMobile = isMobile();
-        // ~~若思源设定非中文，则显示英文~~
-        // let siyuanLanguage;
-        // try{
-        //     siyuanLanguage = window.top.siyuan.config.lang;
-        // }catch (err){
-        //     warnPush("读取语言信息失败");
-        // }
-        // if (siyuanLanguage != "zh_CN" && siyuanLanguage != undefined) {
-        //     language = en_US;
-        // }else {
-        //     language = zh_CN;
-        // }
         language = this.i18n;
         // 读取配置
         // TODO: 读取配置API变更
         Object.assign(g_setting, g_setting_default);
-        let bodyElem = window.document.getElementsByTagName("body");
-        g_initFailedMsgTimeout = setTimeout(()=>{
-            clearInterval(g_initRetryInterval);
-            pushMsg(language["error_initFailed"]);
-        }, 90000);
+
+        g_writeStorage = this.saveData;
         
+        debugPush('FakeDocBradcrumbPluginInited');
+    }
+
+    onLayoutReady() {
         this.loadData("settings.json").then((settingCache)=>{
             // 解析并载入配置
             try {
@@ -123,18 +106,11 @@ class FakeDocBreadcrumb extends siyuan.Plugin {
             // }catch(e) {
             //     errorPush("文档导航插件首次初始化失败", e);
                 // g_initRetryInterval = setInterval(initRetry, 2500);
-            // }
+            // }  
+            initRetry();
         }, (e)=> {
             warnPush("配置文件读入失败", e);
         });
-
-        g_writeStorage = this.saveData;
-        
-        debugPush('FakeDocBradcrumbPluginInited');
-    }
-
-    onLayoutReady() {
-        initRetry();
     }
 
     onunload() {
@@ -143,7 +119,10 @@ class FakeDocBreadcrumb extends siyuan.Plugin {
         removeStyle();
         removeMouseKeyboardListener();
         this.eventBusInnerHandler();
-        // TODO: 移除已经插入的部分
+        // 移除已经插入的部分
+        [].forEach.call(document.querySelectorAll(".og-fake-doc-breadcrumb-container"), (elem)=>{
+            elem.remove();
+        });
     }
     openSetting() {// 创建dialog
         const settingDialog = new siyuan.Dialog({
@@ -191,6 +170,8 @@ class FakeDocBreadcrumb extends siyuan.Plugin {
             new SettingProperty("foldedFrontShow", "NUMBER", [0, 8]),
             new SettingProperty("foldedEndShow", "NUMBER", [0, 8]),
             new SettingProperty("immediatelyUpdate", "SWITCH", null),
+            new SettingProperty("allowFloatWindow", "SWITCH", null),
+            new SettingProperty("usePluginArrow", "SWITCH", null)
         ]);
 
         hello.appendChild(settingForm);
@@ -509,10 +490,10 @@ async function parseDocPath(docDetail) {
 }
 
 async function generateElement(pathObjects, docId) {
-    const divideArrow = `<span class="og-fake-breadcrumb-arrow-span" data-type="%4%" data-parent-id="%5%"><svg class="protyle-breadcrumb__arrow ${CONSTANTS.ARROW_CLASS_NAME}"
+    const divideArrow = `<span class="og-fake-breadcrumb-arrow-span" data-type="%4%" data-parent-id="%5%"><svg class="${g_setting.usePluginArrow ? "" : "protyle-breadcrumb__arrow"} ${CONSTANTS.ARROW_CLASS_NAME}"
         data-type="%4%" data-parent-id="%5%">
         <use xlink:href="#iconRight"></use></svg></span>`;
-    const oneItem = `<span class="protyle-breadcrumb__item fake-breadcrumb-click" data-node-id="%0%" data-type="%3%" data-node-names="%NAMES%">
+    const oneItem = `<span class="protyle-breadcrumb__item fake-breadcrumb-click" %FLOATWINDOW% data-id="%DOCID%" data-node-id="%0%" data-type="%3%" data-node-names="%NAMES%">
         <span class="protyle-breadcrumb__text" title="%1%">%2%</span>
     </span>
     `;
@@ -546,7 +527,8 @@ async function generateElement(pathObjects, docId) {
                 .replaceAll("%1%", "···")
                 .replaceAll("%2%", `···`)
                 .replaceAll("%3%", "...")
-                .replaceAll("%NAMES%", JSON.stringify(hidedNames).replaceAll(`"`, `'`));
+                .replaceAll("%NAMES%", JSON.stringify(hidedNames).replaceAll(`"`, `'`))
+                .replaceAll("%FLOATWINDOW%", "");
             htmlStr += divideArrow.replaceAll("%4%", "HIDE");
             i = foldEndAt;
             // 避免为负数，但好像没啥用
@@ -559,7 +541,8 @@ async function generateElement(pathObjects, docId) {
                 .replaceAll("%0%", onePathObject.id)
                 .replaceAll("%1%", onePathObject.name)
                 .replaceAll("%2%", onePathObject.name)
-                .replaceAll("%3%", onePathObject.type);
+                .replaceAll("%3%", onePathObject.type)
+                .replaceAll("%FLOATWINDOW%", g_setting.allowFloatWindow && onePathObject.type == "FILE" ? `data-type="block-ref" data-subtype="d" data-id="${onePathObject.id}"` : "");
         }
         htmlStr += divideArrow
             .replaceAll("%4%", onePathObject.type)
@@ -824,6 +807,14 @@ function setStyle() {
     .og-hide-breadcrumb {
         opacity: 0;
         transition: 1s;
+    }
+
+    .og-fake-doc-breadcrumb-arrow {
+        height: 10px;
+        width: 10px;
+        color: var(--b3-theme-on-surface-light);
+        margin: 0 4px;
+        flex-shrink: 0
     }
 
     .og-fake-breadcrumb-arrow-span:hover {
