@@ -138,7 +138,7 @@ class FakeDocBreadcrumb extends siyuan.Plugin {
         removeObserver();
         removeStyle();
         removeMouseKeyboardListener();
-        eventBusInnerHandler();
+        this.eventBusInnerHandler();
     }
     openSetting() {// 创建dialog
         const settingDialog = new siyuan.Dialog({
