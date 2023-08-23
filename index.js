@@ -205,37 +205,50 @@ class FakeDocBreadcrumb extends siyuan.Plugin {
 
 
 // debug push
-let g_DEBUG = 0; // 2 写入前台 1 只控制台
-let g_DEBUG_ELEM = null;
+let g_DEBUG = 2;
+const g_NAME = "fdb";
+const g_FULLNAME = "文档面包屑";
 
-function commonPush(str, ...args) {
-    if (g_DEBUG == 0 && (window["OpaqueGlassDebug"] != true)) return;
-    let parsedArgsStr = "";
-    for (let arg of args) {
-        parsedArgsStr += arg;
+/*
+LEVEL 0 忽略所有
+LEVEL 1 仅Error
+LEVEL 2 Err + Warn
+LEVEL 3 Err + Warn + Info
+LEVEL 4 Err + Warn + Info + Log
+LEVEL 5 Err + Warn + Info + Log + Debug
+*/
+function commonPushCheck() {
+    if (window.top["OpaqueGlassDebugV2"] == undefined || window.top["OpaqueGlassDebugV2"][g_NAME] == undefined) {
+        return g_DEBUG;
     }
-    if (g_DEBUG_ELEM && g_DEBUG > 1) {   
-        g_DEBUG_ELEM.innerText = parsedArgsStr;
-        return false;
-    }
-    return true;
+    return window.top["OpaqueGlassDebugV2"][g_NAME];
+}
+
+function isDebugMode() {
+    return commonPushCheck() > g_DEBUG;
 }
 
 function debugPush(str, ...args) {
-    if (commonPush(str, ...args)) {
-        console.log("ogdb "+str, ...args);
+    if (commonPushCheck() >= 5) {
+        console.debug(`${g_FULLNAME}[D] ${new Date().toLocaleString()} ${str}`, ...args);
+    }
+}
+
+function logPush(str, ...args) {
+    if (commonPushCheck() >= 4) {
+        console.log(`${g_FULLNAME}[L] ${new Date().toLocaleString()} ${str}`, ...args);
     }
 }
 
 function errorPush(str, ... args) {
-    if (commonPush(str, ...args)) {
-        console.error("ogdb "+str, ...args);
+    if (commonPushCheck() >= 1) {
+        console.error(`${g_FULLNAME}[E] ${new Date().toLocaleString()} ${str}`, ...args);
     }
 }
 
 function warnPush(str, ... args) {
-    if (commonPush(str, ...args)) {
-        console.warn("ogdb "+str, ...args);
+    if (commonPushCheck() >= 2) {
+        console.warn(`${g_FULLNAME}[W] ${new Date().toLocaleString()} ${str}`, ...args);
     }
 }
 
