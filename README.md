@@ -4,8 +4,8 @@
 
 > Most of this document was translated by Google Translate.
 
-> Current Version: v0.2.5 **Fix**: Unable to drag breadcrumbs to move the window in full screen mode(Alt + Y); 
-[Changelog](CHANGELOG.md)
+> Current Version: v0.2.6 **New**: Option: Allow float window; **New**: Option: Override theme's breadcrumb separator; **Abolish**: Retry after error occurred.
+[Changelog (In Chinese)](CHANGELOG.md)
 
 ### Quick Start
 
@@ -13,7 +13,7 @@
 
 #### Other explanation
 
-- Does not support displaying the floating window when the mouse hovers over;
+- ~~Does not support displaying the floating window when the mouse hovers over~~ Support as an option from v0.2.6;
 - Cannot be used in Mobile device;
 
 ## Feedback bugs
