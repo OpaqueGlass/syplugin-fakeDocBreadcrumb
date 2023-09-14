@@ -107,7 +107,10 @@ class FakeDocBreadcrumb extends siyuan.Plugin {
             //     errorPush("文档导航插件首次初始化失败", e);
                 // g_initRetryInterval = setInterval(initRetry, 2500);
             // }  
-            initRetry();
+            if (!initRetry()) {
+                errorPush("初始化失败，2秒后执行一次重试");
+                setTimeout(initRetry, 2000);
+            }
         }, (e)=> {
             warnPush("配置文件读入失败", e);
         });
@@ -297,23 +300,25 @@ function setObserver() {
             for (let mutation of mutationList) {
                 // console.log("发现页签切换", mutation);
                 setTimeout(async () => {
-                    console.time(g_TIMER_LABLE_NAME_COMPARE);
+                    if (isDebugMode()) console.time(g_TIMER_LABLE_NAME_COMPARE);
                     try{
+                        debugPush("移动端切换文档触发");
                         // TODO: 改为动态获取id
                         await main([mutation.target]);
                     }catch(err) {
-                        errorPush(err);
+                        console.error(err);
                     }
-                    console.timeEnd(g_TIMER_LABLE_NAME_COMPARE);
+                    if (isDebugMode()) console.timeEnd(g_TIMER_LABLE_NAME_COMPARE);
                 }, Math.round(Math.random() * CONSTANTS.OBSERVER_RANDOM_DELAY) + CONSTANTS.OBSERVER_RANDOM_DELAY_ADD);
             }
         });
         g_switchTabObserver.observe(window.document.querySelector(".protyle-background[data-node-id]"), {"attributes": true, "attributeFilter": ["data-node-id"]});
         debugPush("MOBILE_LOADED");
         try {
+            debugPush("移动端立即执行触发");
             main();
         } catch(err) {
-            errorPush(err);
+            debugPush("移动端立即main执行", err);
         }
         return;
     }
@@ -398,7 +403,10 @@ async function eventBusHandler(detail) {
 }
 
 async function main(targets) {
-    if (g_isMobile) return;
+    if (g_isMobile) {
+        await mobileMain();
+        return;
+    }
     let retryCount = 0;
     let success = false;
     while (retryCount < 2) {
@@ -446,6 +454,78 @@ async function main(targets) {
     }
 
     
+}
+
+async function mobileMain() {
+    const docId = getCurrentDocIdF();
+    if (!isValidStr(docId)) {
+        return;
+    }
+    const docDetail = await getCurrentDocDetail(docId);
+    if (docDetail == null) {
+        return;
+    }
+    // 添加一个btn
+    const buttonElem = document.createElement("span");
+    buttonElem.classList.add("protyle-breadcrumb__icon");
+    buttonElem.classList.add("og-fdb-mobile-btn-class")
+    buttonElem.setAttribute("id", "og-fdb-mobile-btn");
+    
+    buttonElem.innerHTML = trimPath(docDetail.hpath);
+    buttonElem.addEventListener("click", (event)=>{
+        event.preventDefault();
+        event.stopPropagation();
+        openMobileMenu(docDetail.path, docDetail.hpath);
+    });
+    document.getElementById("og-fdb-mobile-btn")?.remove();
+    const protyleBreadcrumbBar = document.querySelector(".protyle-breadcrumb");
+    protyleBreadcrumbBar.insertAdjacentElement("afterbegin", buttonElem);
+}
+
+/**
+ * 从Path获取按钮内部元素HTML
+ * @param {*} path 
+ * @returns btn inner HTML
+ */
+function trimPath(path) {
+    const seperator = "/";
+    let result;
+    let pathArray = path.split(seperator).slice(1);
+    for (let i = 0; i < pathArray.length; i++) {
+        pathArray[i] = `<span class="og-fdb-mobile-btn-path">/${pathArray[i]}</span>`;
+    }
+
+    if (pathArray.length > 4) {
+        const trimmedPathArray = ['<span class="og-fdb-mobile-btn-path">...</span>'].concat(pathArray.slice(-3));
+        result = trimmedPathArray.join("");
+    } else {
+        result = pathArray.join("");
+    }
+    return result;
+}
+
+async function openMobileMenu(idPath, hPath) {
+    // 解析，构造PathMenu
+    const tempMenu = new siyuan.Menu("testMenuOGFDB");
+    const idPathItem = idPath.split("/").slice(1);
+    const hPathItem = hPath.split("/").slice(1);
+    
+    for (let i = 0; i < idPathItem.length; i++) {
+        const currentId = idPathItem[i].includes(".sy") ? idPathItem[i].slice(0, -3) : idPathItem[i];
+        const currentName = hPathItem[i].includes(".sy") ? hPathItem[i].slice(0, -3) : hPathItem[i];
+        let tempMenuItemObj = {
+            
+            icon: "",
+            label: currentName,
+            click: openRefLink.bind(this, undefined, currentId, {
+                ctrlKey: false,
+                shiftKey: false,
+                altKey: false})
+        }
+        tempMenu.addItem(tempMenuItemObj);
+    }
+    // tempMenu.open({x: 122, y: 122});
+    tempMenu.fullscreen("all");
 }
 
 function sleep(time){
@@ -820,6 +900,18 @@ function setStyle() {
     .og-fake-breadcrumb-arrow-span:hover {
         color: var(--b3-menu-highlight-color);
         background-color: var(--b3-menu-highlight-background);
+    }
+    /*移动端样式*/
+    .og-fdb-mobile-btn-class {
+        max-width: 60%;
+        overflow: auto;
+        display: flex;
+    }
+
+    .og-fdb-mobile-btn-path {
+        max-width: 6em;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
     `;
     head.appendChild(style);
