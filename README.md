@@ -2,7 +2,7 @@
 
 [请点这里阅读中文说明](README_zh_CN.md)
 
-> Most of this document was translated by Google Translate.
+> Most of this document was translated by Google Translate and GPT.
 
 > Current Version: v0.2.6 **New**: Option: Allow float window; **New**: Option: Override theme's breadcrumb separator; **Abolish**: Retry after error occurred.
 [Changelog (In Chinese)](CHANGELOG.md)
@@ -14,7 +14,8 @@
 #### Other explanation
 
 - ~~Does not support displaying the floating window when the mouse hovers over~~ Support as an option from v0.2.6;
-- Cannot be used in Mobile device;
+- Limited support for Android and mobile Device;
+- You can browse the settings on the plugin settings page. Just a tip, the settings page can be scrolled up and down.
 
 ## Feedback bugs
 
