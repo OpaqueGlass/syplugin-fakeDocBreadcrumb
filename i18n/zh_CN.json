@@ -8,7 +8,7 @@
     "setting_showNotebook_name": "显示笔记本层级",
     "setting_showNotebook_desp": "",
     "setting_oneLineBreadcrumb_name": "🧪与块面包屑在同一行显示",
-    "setting_oneLineBreadcrumb_desp": "",
+    "setting_oneLineBreadcrumb_desp": "在面包屑过长时和块面包屑的兼容异常",
     "setting_foldedFrontShow_name": "始终保留靠前的N个文档",
     "setting_foldedFrontShow_desp": "在文档层级过深时，将隐藏中间的部分文档。通过更改该设置，可以避免一些文档被隐藏。",
     "setting_foldedEndShow_name": "始终保留靠后的N个文档",

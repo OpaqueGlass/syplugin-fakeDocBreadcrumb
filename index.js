@@ -61,7 +61,7 @@ let g_setting_default = {
     "typeHide": false,
     "foldedFrontShow": 2,
     "foldedEndShow": 3,
-    "oneLineBreadcrumb": false,
+    "oneLineBreadcrumb": true,
     "timelyUpdate": true, // 及时响应更新
     "immediatelyUpdate": false, // 实时响应更新
     "allowFloatWindow": false, // 触发浮窗
@@ -496,7 +496,7 @@ function trimPath(path) {
     }
 
     if (pathArray.length > 4) {
-        const trimmedPathArray = ['<span class="og-fdb-mobile-btn-path">...</span>'].concat(pathArray.slice(-3));
+        const trimmedPathArray = ['<span class="og-fdb-mobile-btn-path-folded">...</span>'].concat(pathArray.slice(-3));
         result = trimmedPathArray.join("");
     } else {
         result = pathArray.join("");
@@ -912,6 +912,9 @@ function setStyle() {
         max-width: 6em;
         overflow: hidden;
         text-overflow: ellipsis;
+    }
+    .og-fdb-mobile-btn-path-folded {
+
     }
     `;
     head.appendChild(style);
