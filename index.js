@@ -223,6 +223,12 @@ function debugPush(str, ...args) {
     }
 }
 
+function infoPush(str, ...args) {
+    if (commonPushCheck() >= 3) {
+        console.info(`${g_FULLNAME}[I] ${new Date().toLocaleString()} ${str}`, ...args);
+    }
+}
+
 function logPush(str, ...args) {
     if (commonPushCheck() >= 4) {
         console.log(`${g_FULLNAME}[L] ${new Date().toLocaleString()} ${str}`, ...args);
@@ -418,6 +424,10 @@ async function main(targets) {
             g_mutex++;
             // 获取当前文档id
             const docId = getCurrentDocIdF();
+            if (!isValidStr(docId)) {
+                infoPush("没有检测到当前文档，已停止后续操作");
+                return;
+            }
             const docDetail = await getCurrentDocDetail(docId);
             debugPush('DETAIL', docDetail);
             if (!isValidStr(docDetail)) {
@@ -459,6 +469,7 @@ async function main(targets) {
 async function mobileMain() {
     const docId = getCurrentDocIdF();
     if (!isValidStr(docId)) {
+        infoPush("没有检测到当前文档id，已停止后续操作");
         return;
     }
     const docDetail = await getCurrentDocDetail(docId);
