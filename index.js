@@ -65,7 +65,7 @@ let g_setting_default = {
     "timelyUpdate": true, // 及时响应更新
     "immediatelyUpdate": false, // 实时响应更新
     "allowFloatWindow": false, // 触发浮窗
-    "usePluginArrow": false, // 使用挂件>箭头
+    "usePluginArrow": true, // 使用挂件>箭头
 };
 /**
  * Plugin类
@@ -581,9 +581,9 @@ async function parseDocPath(docDetail) {
 }
 
 async function generateElement(pathObjects, docId) {
-    const divideArrow = `<span class="og-fake-breadcrumb-arrow-span" data-type="%4%" data-parent-id="%5%"><svg class="${g_setting.usePluginArrow ? "" : "protyle-breadcrumb__arrow"} ${CONSTANTS.ARROW_CLASS_NAME}"
+    const divideArrow = `<svg class="${g_setting.usePluginArrow ? CONSTANTS.ARROW_CLASS_NAME : "protyle-breadcrumb__arrow"}"
         data-type="%4%" data-parent-id="%5%">
-        <use xlink:href="#iconRight"></use></svg></span>`;
+        <use xlink:href="#iconRight"></use></svg>`;
     const oneItem = `<span class="protyle-breadcrumb__item fake-breadcrumb-click" %FLOATWINDOW% data-id="%DOCID%" data-node-id="%0%" data-type="%3%" data-node-names="%NAMES%">
         <span class="protyle-breadcrumb__text" title="%1%">%2%</span>
     </span>
@@ -653,7 +653,11 @@ async function generateElement(pathObjects, docId) {
     barElement.innerHTML = htmlStr;
     result.appendChild(barElement);
     result.classList.add(CONSTANTS.CONTAINER_CLASS_NAME);
-    result.classList.add("protyle-breadcrumb");
+    if (!g_setting.oneLineBreadcrumb) {
+        result.classList.add("protyle-breadcrumb");
+    } else {
+        result.classList.add("og-breadcrumb-oneline");
+    }
     let spaceElement = document.createElement("span");
     spaceElement.classList.add("protyle-breadcrumb__space");
     result.appendChild(spaceElement);
@@ -686,7 +690,7 @@ function setAndApply(element, docId) {
         elem.removeEventListener("click", openHideMenu);
         elem.addEventListener("click", openHideMenu);
     });
-    [].forEach.call(window.document.querySelectorAll(`.og-fake-doc-breadcrumb-container .og-fake-breadcrumb-arrow-span[data-type="FILE"], .og-fake-breadcrumb-arrow-span[data-type="NOTEBOOK"]`), (elem)=>{
+    [].forEach.call(window.document.querySelectorAll(`.og-fake-doc-breadcrumb-container svg[data-type="FILE"], svg[data-type="NOTEBOOK"]`), (elem)=>{
         elem.removeEventListener("click", openRelativeMenu);
         elem.addEventListener("click", openRelativeMenu);
     });
@@ -878,6 +882,9 @@ function setStyle() {
     const style = document.createElement('style');
     style.setAttribute("id", CONSTANTS.STYLE_ID);
     style.innerHTML = `
+    .og-breadcrumb-oneline {
+        margin-right: 3px;
+    }
     
     .${CONSTANTS.CONTAINER_CLASS_NAME} .protyle-breadcrumb__text {
         margin-left: 0px;
@@ -892,7 +899,7 @@ function setStyle() {
         display: block !important;
     }
 
-    .og-fake-breadcrumb-arrow-span[data-type=FILE], .og-fake-breadcrumb-arrow-span[data-type=NOTEBOOK] {
+    .og-fake-doc-breadcrumb-arrow[data-type=FILE], .og-fake-doc-breadcrumb-arrow[data-type=NOTEBOOK] {
         cursor: pointer;
     }
     .og-hide-breadcrumb {
@@ -908,7 +915,7 @@ function setStyle() {
         flex-shrink: 0
     }
 
-    .og-fake-breadcrumb-arrow-span:hover {
+    .og-fake-doc-breadcrumb-arrow:hover {
         color: var(--b3-menu-highlight-color);
         background-color: var(--b3-menu-highlight-background);
     }
