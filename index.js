@@ -915,6 +915,11 @@ function setStyle() {
         flex-shrink: 0
     }
 
+    svg.og-fake-doc-breadcrumb-arrow.protyle-breadcrumb__arrow {
+        border: none;
+        transform: none;
+    }
+
     .og-fake-doc-breadcrumb-arrow:hover {
         color: var(--b3-menu-highlight-color);
         background-color: var(--b3-menu-highlight-background);
