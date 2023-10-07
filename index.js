@@ -893,6 +893,10 @@ function setStyle() {
         text-overflow: ellipsis;
     }
 
+    .og-fake-doc-breadcrumb-container.protyle-breadcrumb {
+        padding-bottom: 0px;
+    }
+
     .protyle-breadcrumb__bar protyle-breadcrumb__bar--nowrap
 
     .${CONSTANTS.CONTAINER_CLASS_NAME} {
@@ -914,7 +918,7 @@ function setStyle() {
         margin: 0 4px;
         flex-shrink: 0
     }
-
+    /* savor 样式兼容 */
     svg.og-fake-doc-breadcrumb-arrow.protyle-breadcrumb__arrow {
         border: none;
         transform: none;
