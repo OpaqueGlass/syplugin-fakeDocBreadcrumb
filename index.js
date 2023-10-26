@@ -52,7 +52,8 @@ let g_setting = {
     "timelyUpdate": null, // 及时响应更新
     "immediatelyUpdate": null, // 实时响应更新
     "allowFloatWindow": null,
-    "usePluginArrow": null
+    "usePluginArrow": null,
+    "mainRetry": null, // 主函数重试次数
 };
 let g_setting_default = {
     "nameMaxLength": 15,
@@ -66,6 +67,7 @@ let g_setting_default = {
     "immediatelyUpdate": false, // 实时响应更新
     "allowFloatWindow": false, // 触发浮窗
     "usePluginArrow": true, // 使用挂件>箭头
+    "mainRetry": 5, // 主函数重试次数
 };
 /**
  * Plugin类
@@ -140,7 +142,7 @@ class FakeDocBreadcrumb extends siyuan.Plugin {
             </div>
             `,
             "width": isMobile() ? "92vw":"1040px",
-            "height": isMobile() ? "50vw":"540px",
+            "height": isMobile() ? "50vw":"80vh",
         });
         debugPush("dialog", settingDialog);
         const actionButtons = settingDialog.element.querySelectorAll(`#${CONSTANTS.PLUGIN_NAME}-form-action button`);
@@ -174,7 +176,8 @@ class FakeDocBreadcrumb extends siyuan.Plugin {
             new SettingProperty("foldedEndShow", "NUMBER", [0, 8]),
             new SettingProperty("immediatelyUpdate", "SWITCH", null),
             new SettingProperty("allowFloatWindow", "SWITCH", null),
-            new SettingProperty("usePluginArrow", "SWITCH", null)
+            new SettingProperty("usePluginArrow", "SWITCH", null),
+            new SettingProperty("mainRetry", "NUMBER", [0, 20]),
         ]);
 
         hello.appendChild(settingForm);
@@ -415,23 +418,28 @@ async function main(targets) {
     }
     let retryCount = 0;
     let success = false;
-    while (retryCount < 2) {
+    let failDueToEmptyId = false;
+    do {
         retryCount ++ ;
-        try {
-            if (g_mutex > 0) {
-                return;
-            }
+        if (g_mutex > 0) {
+            debugPush("发现已有main正在运行，已停止");
+            return;
+        }
+        try {   
             g_mutex++;
             // 获取当前文档id
             const docId = getCurrentDocIdF();
             if (!isValidStr(docId)) {
-                infoPush("没有检测到当前文档，已停止后续操作");
-                return;
+                failDueToEmptyId = true;
+                debugPush(`第${retryCount}次获取文档id失败，休息一会儿后重新尝试`);
+                await sleep(200);
+                continue;
             }
+            failDueToEmptyId = false;
             const docDetail = await getCurrentDocDetail(docId);
             debugPush('DETAIL', docDetail);
             if (!isValidStr(docDetail)) {
-                throw new Error("找不到当前打开的文档");
+                throw new Error("数据库中找不到当前打开的文档");
             }
             // 检查是否重复插入
             if (!g_setting.timelyUpdate &&  window.top.document.querySelector(`.fn__flex-1.protyle:has(.protyle-background[data-node-id="${docId}"]) .${CONSTANTS.CONTAINER_CLASS_NAME}`)) {
@@ -458,11 +466,14 @@ async function main(targets) {
         } else {
             break;
         }
+    } while (isValidStr(g_setting.mainRetry) && retryCount < parseInt(g_setting.mainRetry));
+    if (!success && failDueToEmptyId) {
+        logPush("未能获取文档id，且重试次数已达上限，停止重试");
+    } else if (!success) {
+        logPush("重试次数已达上限，停止重试");
+        // 抛出是为了防止后续错误
+        throw new Error(errorTemp);
     }
-    if (!success) {
-        throw new Error("已经重试2次，仍然存在错误");
-    }
-
     
 }
 
@@ -1276,7 +1287,19 @@ function loadUISettings(formElement) {
     let numbers = formElement.querySelectorAll("input[type='number']");
     // console.log(numbers);
     for (let number of numbers) {
-        result[number.name] = parseFloat(number.value);
+        let minValue = number.getAttribute("min");
+        let maxValue = number.getAttribute("max");
+        let value = parseFloat(number.value);
+
+        if (minValue !== null && value < parseFloat(minValue)) {
+            number.value = minValue;
+            result[number.name] = parseFloat(minValue);
+        } else if (maxValue !== null && value > parseFloat(maxValue)) {
+            number.value = maxValue;
+            result[number.name] = parseFloat(maxValue);
+        } else {
+            result[number.name] = value;
+        }
     }
 
     debugPush("UI SETTING", result);

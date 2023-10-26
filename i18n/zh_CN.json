@@ -19,6 +19,8 @@
     "setting_allowFloatWindow_desp": "更改此项后，需要重新打开已经存在的文档页签。",
     "setting_usePluginArrow_name": "🆕覆盖主题的面包屑分隔符\">\"样式",
     "setting_usePluginArrow_desp": "对于部分将面包屑分隔符\">\"显示为\"/\"的主题，点击分隔符不能展示子文档菜单。启用此项将解决此问题。",
+    "setting_mainRetry_name": "🧪🆕超时重试次数",
+    "setting_mainRetry_desp": "如果未能显示，将间隔200ms进行重试。由于新创建的文档未入数据库，该设置对新创建的文档无效。",
 
     "setting_experimental": "（实验性功能，不稳定）",
 
