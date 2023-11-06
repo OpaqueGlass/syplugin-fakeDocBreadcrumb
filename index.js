@@ -296,7 +296,9 @@ function initRetry() {
     if (successFlag) {
         clearInterval(g_initRetryInterval);
         logPush("文档面包屑插件初始化成功");
+        return true;
     }
+    return false;
 }
 
 
@@ -311,7 +313,7 @@ function setObserver() {
                 setTimeout(async () => {
                     if (isDebugMode()) console.time(g_TIMER_LABLE_NAME_COMPARE);
                     try{
-                        debugPush("移动端切换文档触发");
+                        debugPush("由 移动端切换文档 触发");
                         // TODO: 改为动态获取id
                         await main([mutation.target]);
                     }catch(err) {
@@ -324,7 +326,7 @@ function setObserver() {
         g_switchTabObserver.observe(window.document.querySelector(".protyle-background[data-node-id]"), {"attributes": true, "attributeFilter": ["data-node-id"]});
         debugPush("MOBILE_LOADED");
         try {
-            debugPush("移动端立即执行触发");
+            debugPush("由 移动端立即执行 触发");
             main();
         } catch(err) {
             debugPush("移动端立即main执行", err);
@@ -338,6 +340,7 @@ function setObserver() {
                 console.time(g_TIMER_LABLE_NAME_COMPARE);
                 try{
                     // TODO: 改为动态获取id
+                    debugPush("由 页签切换 触发");
                     await main([mutation.target]);
                 }catch(err) {
                     errorPush(err);
@@ -355,12 +358,15 @@ function setObserver() {
                 g_switchTabObserver.disconnect();
                 clearInterval(g_observerRetryInterval);
                 g_observerRetryInterval = setInterval(observerRetry, CONSTANTS.OBSERVER_RETRY_INTERVAL);
+                // setInterval将不会立即执行，这里需要立即执行
+                observerRetry();
             }
             
         }
         
     });
     g_observerRetryInterval = setInterval(observerRetry, CONSTANTS.OBSERVER_RETRY_INTERVAL);
+    observerRetry();
     g_windowObserver.observe(window.siyuan.layout.centerLayout.element, {childList: true});
 }
 /**
@@ -379,6 +385,7 @@ function observerRetry() {
                     // console.time(g_TIMER_LABLE_NAME_COMPARE);
                     try{
                         // TODO
+                        debugPush("由 页签监听重新绑定 触发");
                         await main(element.children);
                     }catch (err) {
                         errorPush(err);
@@ -680,16 +687,18 @@ async function generateElement(pathObjects, docId) {
 
 function setAndApply(element, docId) {
     // TODO: 移除已有的面包屑
-    const tempOldElem = window.top.document.querySelector(`.fn__flex-1.protyle:has(.protyle-background[data-node-id="${docId}"]) .og-fake-doc-breadcrumb-container`);
+    const tempOldElem = window.top.document.querySelector(`.layout__wnd--active .fn__flex-1.protyle:has(.protyle-background[data-node-id="${docId}"]) .og-fake-doc-breadcrumb-container`);
+    debugPush("setAndApply定位原有面包屑全部匹配结果", window.top.document.querySelectorAll(`.layout__wnd--active .fn__flex-1.protyle:has(.protyle-background[data-node-id="${docId}"]) .og-fake-doc-breadcrumb-container`));
+    debugPush("setAndApply定位文档位置全部匹配结果", window.top.document.querySelectorAll(`.layout__wnd--active .fn__flex-1.protyle:has(.protyle-background[data-node-id="${docId}"]) .protyle-breadcrumb__bar`));
     if (tempOldElem) {
         tempOldElem.remove();
         debugPush("移除原有面包屑成功");
     }
 
     if (g_setting.oneLineBreadcrumb) {
-        window.top.document.querySelector(`.fn__flex-1.protyle:has(.protyle-background[data-node-id="${docId}"]) .protyle-breadcrumb__bar`).insertAdjacentElement("beforebegin",element);
+        window.top.document.querySelector(`.layout__wnd--active .fn__flex-1.protyle:has(.protyle-background[data-node-id="${docId}"]) .protyle-breadcrumb__bar`).insertAdjacentElement("beforebegin",element);
     }else{
-        window.top.document.querySelector(`.fn__flex-1.protyle:has(.protyle-background[data-node-id="${docId}"]) .protyle-breadcrumb`).insertAdjacentElement("beforebegin",element);
+        window.top.document.querySelector(`.layout__wnd--active .fn__flex-1.protyle:has(.protyle-background[data-node-id="${docId}"]) .protyle-breadcrumb`).insertAdjacentElement("beforebegin",element);
     }
     debugPush("重写面包屑成功");
     
