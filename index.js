@@ -22,6 +22,7 @@ const CONSTANTS = {
     PLUGIN_NAME: "og_fake_doc_breadcrumb",
     SAVE_TIMEOUT: 900,
     CONTAINER_CLASS_NAME: "og-fake-doc-breadcrumb-container", 
+    ARROW_SPAN_NAME: "og-fake-doc-breadcrumb-arrow-span",
     ARROW_CLASS_NAME: "og-fake-doc-breadcrumb-arrow",
     MENU_ITEM_CLASS_NAME: "og-fake-doc-breadcrumb-menu-item-container",
     SIBLING_CONTAINER_ID: "og-fake-doc-breadcrumb-sibling-doc-container",
@@ -599,9 +600,10 @@ async function parseDocPath(docDetail) {
 }
 
 async function generateElement(pathObjects, docId) {
-    const divideArrow = `<svg class="${g_setting.usePluginArrow ? CONSTANTS.ARROW_CLASS_NAME : "protyle-breadcrumb__arrow"}"
-        data-type="%4%" data-parent-id="%5%">
-        <use xlink:href="#iconRight"></use></svg>`;
+    const divideArrow = `<span class="${CONSTANTS.ARROW_SPAN_NAME} " data-type="%4%" data-parent-id="%5%"><svg class="${g_setting.usePluginArrow ? CONSTANTS.ARROW_CLASS_NAME : "protyle-breadcrumb__arrow"}"
+        >
+        <use xlink:href="#iconRight"></use></svg></span>
+        `;
     const oneItem = `<span class="protyle-breadcrumb__item fake-breadcrumb-click" %FLOATWINDOW% data-id="%DOCID%" data-node-id="%0%" data-type="%3%" data-node-names="%NAMES%">
         <span class="protyle-breadcrumb__text" title="%1%">%2%</span>
     </span>
@@ -710,7 +712,7 @@ function setAndApply(element, docId) {
         elem.removeEventListener("click", openHideMenu);
         elem.addEventListener("click", openHideMenu);
     });
-    [].forEach.call(window.document.querySelectorAll(`.og-fake-doc-breadcrumb-container svg[data-type="FILE"], svg[data-type="NOTEBOOK"]`), (elem)=>{
+    [].forEach.call(window.document.querySelectorAll(`.og-fake-doc-breadcrumb-container .${CONSTANTS.ARROW_SPAN_NAME}[data-type="FILE"], .og-fake-doc-breadcrumb-container .${CONSTANTS.ARROW_SPAN_NAME}[data-type="NOTEBOOK"]`), (elem)=>{
         elem.removeEventListener("click", openRelativeMenu);
         elem.addEventListener("click", openRelativeMenu);
     });
@@ -923,9 +925,17 @@ function setStyle() {
         display: block !important;
     }
 
-    .og-fake-doc-breadcrumb-arrow[data-type=FILE], .og-fake-doc-breadcrumb-arrow[data-type=NOTEBOOK] {
+    .og-fake-doc-breadcrumb-arrow-span[data-type=FILE], .og-fake-doc-breadcrumb-arrow-span[data-type=NOTEBOOK] {
         cursor: pointer;
     }
+    /* 上下错位调整，以及增大触发范围 */
+    .og-fake-doc-breadcrumb-arrow-span {
+        height: 24px;
+        border-radius: var(--b3-border-radius);
+        display: flex;
+        align-items: center;
+    }
+
     .og-hide-breadcrumb {
         opacity: 0;
         transition: 1s;
@@ -944,7 +954,7 @@ function setStyle() {
         transform: none;
     }
 
-    .og-fake-doc-breadcrumb-arrow:hover {
+    .og-fake-doc-breadcrumb-arrow-span:hover {
         color: var(--b3-menu-highlight-color);
         background-color: var(--b3-menu-highlight-background);
     }
