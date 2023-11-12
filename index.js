@@ -55,6 +55,7 @@ let g_setting = {
     "allowFloatWindow": null,
     "usePluginArrow": null,
     "mainRetry": null, // 主函数重试次数
+    "backTopAfterOpenDoc": null,
 };
 let g_setting_default = {
     "nameMaxLength": 15,
@@ -69,6 +70,7 @@ let g_setting_default = {
     "allowFloatWindow": false, // 触发浮窗
     "usePluginArrow": true, // 使用挂件>箭头
     "mainRetry": 5, // 主函数重试次数
+    "backTopAfterOpenDoc": false, // 打开新文档后返回文档开头（变相禁用文档浏览位置记忆）
 };
 /**
  * Plugin类
@@ -179,6 +181,7 @@ class FakeDocBreadcrumb extends siyuan.Plugin {
             new SettingProperty("allowFloatWindow", "SWITCH", null),
             new SettingProperty("usePluginArrow", "SWITCH", null),
             new SettingProperty("mainRetry", "NUMBER", [0, 20]),
+            new SettingProperty("backTopAfterOpenDoc", "SWITCH", null),
         ]);
 
         hello.appendChild(settingForm);
@@ -191,6 +194,11 @@ class FakeDocBreadcrumb extends siyuan.Plugin {
             this.eventBus.on("ws-main", eventBusHandler);
         }else{
             this.eventBus.off("ws-main", eventBusHandler);
+        }
+        if (g_setting.backTopAfterOpenDoc) {
+            this.eventBus.on("loaded-protyle-static", backTopEventBusHandler);
+        } else {
+            this.eventBus.on("loaded-protyle-static", backTopEventBusHandler);
         }
     }
 }
@@ -417,6 +425,32 @@ async function eventBusHandler(detail) {
             errorPush(err);
         }
     }
+}
+
+async function backTopEventBusHandler(event) {
+    debugPush("eventprotyle", event);
+    setTimeout(()=>{
+        const homeElem =  event.detail.protyle.scroll?.element?.previousElementSibling;
+        debugPush("homeElem", homeElem);
+        homeElem?.click();
+    }, 270);
+    // setTimeout(()=>{
+    //     debugPush("dispatched")
+    // dispatchKeyEvent({
+    //     ctrlKey: true,
+    //     altKey: false,
+    //     metaKey: false,
+    //     shiftKey: false,
+    //     key: 'Home',
+    //     keyCode: 36
+    //   });}, 3000);
+    // function dispatchKeyEvent(keyInit) {
+    //     keyInit["bubbles"] = true;
+    //     let keydownEvent = new KeyboardEvent('keydown', keyInit);
+    //     protyle.detail.protyle.element.dispatchEvent(keydownEvent);
+    //     let keyUpEvent = new KeyboardEvent('keyup', keyInit);
+    //     protyle.detail.protyle.element.dispatchEvent(keyUpEvent);
+    // }
 }
 
 async function main(targets) {
@@ -955,6 +989,11 @@ function setStyle() {
     }
 
     .og-fake-doc-breadcrumb-arrow-span:hover {
+        color: var(--b3-theme-on-background);
+        background-color: var(--b3-list-hover);
+    }
+
+    .og-fake-doc-breadcrumb-arrow-span:hover > .og-fake-doc-breadcrumb-arrow {
         color: var(--b3-menu-highlight-color);
         background-color: var(--b3-menu-highlight-background);
     }
