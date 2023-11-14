@@ -42,6 +42,8 @@ let g_saveTimeout;
 let g_writeStorage;
 let g_isMobile = false;
 let g_hidedBreadcrumb = false;
+let g_switchProtyleCheckCount = 0;
+let g_switchProtyleCheckTimeout = null;
 let g_setting = {
     "nameMaxLength": null,
     "docMaxNum": null,
@@ -196,9 +198,11 @@ class FakeDocBreadcrumb extends siyuan.Plugin {
             this.eventBus.off("ws-main", eventBusHandler);
         }
         if (g_setting.backTopAfterOpenDoc) {
+            this.eventBus.on("switch-protyle", backTopEventBusHandler);
             this.eventBus.on("loaded-protyle-static", backTopEventBusHandler);
         } else {
-            this.eventBus.on("loaded-protyle-static", backTopEventBusHandler);
+            this.eventBus.off("switch-protyle", backTopEventBusHandler);
+            this.eventBus.off("loaded-protyle-static", backTopEventBusHandler);
         }
     }
 }
@@ -427,12 +431,39 @@ async function eventBusHandler(detail) {
     }
 }
 
+/**
+ * 重复验证使用，必须两个事件都有，才会执行
+ */
 async function backTopEventBusHandler(event) {
+    g_switchProtyleCheckCount++;
+    clearTimeout(g_switchProtyleCheckTimeout);
+    g_switchProtyleCheckTimeout = setTimeout(()=>{
+        debugPush("检测到事件执行, count值为", g_switchProtyleCheckCount);
+        if (g_switchProtyleCheckCount >= 2) {
+            backTopEventBusWorker(event);
+        }
+        g_switchProtyleCheckCount = 0;
+        clearTimeout(g_switchProtyleCheckTimeout);
+    }, 30);
+}
+
+async function backTopEventBusWorker(event) {
     debugPush("eventprotyle", event);
+    if (event.detail.protyle.block.id) {
+        // 新建文档不要响应
+        const sqlResult = await sqlAPI(`SELECT id FROM blocks WHERE id = "${event.detail.protyle.block.id}"`);
+        debugPush("Sqlresult", sqlResult);
+        if (sqlResult.length == 0) {
+            debugPush("新文档，不top");
+            return ;
+        }
+    }
+    
     setTimeout(()=>{
         const homeElem =  event.detail.protyle.scroll?.element?.previousElementSibling;
         debugPush("homeElem", homeElem);
         homeElem?.click();
+        logPush("Back top");
     }, 270);
     // setTimeout(()=>{
     //     debugPush("dispatched")
@@ -461,6 +492,7 @@ async function main(targets) {
     let retryCount = 0;
     let success = false;
     let failDueToEmptyId = false;
+    let errorTemp = null;
     do {
         retryCount ++ ;
         if (g_mutex > 0) {
@@ -481,7 +513,8 @@ async function main(targets) {
             const docDetail = await getCurrentDocDetail(docId);
             debugPush('DETAIL', docDetail);
             if (!isValidStr(docDetail)) {
-                throw new Error("数据库中找不到当前打开的文档");
+                logPush("数据库中找不到当前打开的文档");
+                return;
             }
             // 检查是否重复插入
             if (!g_setting.timelyUpdate &&  window.top.document.querySelector(`.fn__flex-1.protyle:has(.protyle-background[data-node-id="${docId}"]) .${CONSTANTS.CONTAINER_CLASS_NAME}`)) {
@@ -499,8 +532,13 @@ async function main(targets) {
             success = true;
         }catch(err){
             warnPush(err);
+            errorTemp = err;
         }finally{
             g_mutex = 0;
+        }
+        if (errorTemp) {
+            debugPush("由于出现错误，终止重试", errorTemp);
+            break;
         }
         if (!success) {
             debugPush(`重试中${retryCount}，休息一会儿后重新尝试`);
@@ -732,9 +770,19 @@ function setAndApply(element, docId) {
     }
 
     if (g_setting.oneLineBreadcrumb) {
-        window.top.document.querySelector(`.layout__wnd--active .fn__flex-1.protyle:has(.protyle-background[data-node-id="${docId}"]) .protyle-breadcrumb__bar`).insertAdjacentElement("beforebegin",element);
+        const elem = window.top.document.querySelector(`.layout__wnd--active .fn__flex-1.protyle:has(.protyle-background[data-node-id="${docId}"]) .protyle-breadcrumb__bar`);
+        if (elem) {
+            elem.insertAdjacentElement("beforebegin", element);
+        }else{
+            debugPush("可能是由于没有焦点不再文档上");
+        }
     }else{
-        window.top.document.querySelector(`.layout__wnd--active .fn__flex-1.protyle:has(.protyle-background[data-node-id="${docId}"]) .protyle-breadcrumb`).insertAdjacentElement("beforebegin",element);
+        const elem = window.top.document.querySelector(`.layout__wnd--active .fn__flex-1.protyle:has(.protyle-background[data-node-id="${docId}"]) .protyle-breadcrumb`);
+        if (elem) {
+            elem.insertAdjacentElement("beforebegin",element);
+        } else {
+            debugPush("可能是由于焦点不在文档上");
+        }
     }
     debugPush("重写面包屑成功");
     
