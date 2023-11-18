@@ -198,11 +198,11 @@ class FakeDocBreadcrumb extends siyuan.Plugin {
             this.eventBus.off("ws-main", eventBusHandler);
         }
         if (g_setting.backTopAfterOpenDoc) {
-            this.eventBus.on("switch-protyle", backTopEventBusHandler);
-            this.eventBus.on("loaded-protyle-static", backTopEventBusHandler);
+            // this.eventBus.on("switch-protyle", backTopEventBusHandler);
+            this.eventBus.on("loaded-protyle-static", backTopEventBusWorker);
         } else {
-            this.eventBus.off("switch-protyle", backTopEventBusHandler);
-            this.eventBus.off("loaded-protyle-static", backTopEventBusHandler);
+            // this.eventBus.off("switch-protyle", backTopEventBusHandler);
+            this.eventBus.off("loaded-protyle-static", backTopEventBusWorker);
         }
     }
 }
@@ -433,6 +433,8 @@ async function eventBusHandler(detail) {
 
 /**
  * 重复验证使用，必须两个事件都有，才会执行
+ * 大量错误触发，取缔中
+ * @deprecated
  */
 async function backTopEventBusHandler(event) {
     g_switchProtyleCheckCount++;
@@ -448,23 +450,85 @@ async function backTopEventBusHandler(event) {
 }
 
 async function backTopEventBusWorker(event) {
-    debugPush("eventprotyle", event);
+    const eventProtyle = event.detail.protyle;
+    const eventMode = event.detail.protyle.block.mode;
+    // 3 搜索或结果跳转？
+    // 4 End
+    // 0理论上是正常打开
+    const eventIdMatch = event.detail.protyle.block.rootID == event.detail.protyle.block.id;
+    const eventScroll = eventProtyle.block.scroll;
+    const eventShowAll = eventProtyle.block.showAll;
+    // debugPush("debugProtyleEvent", eventProtyle);
+    // debugPush("debugProtyleEvent block mode", eventMode);
+    // debugPush("debugProtyleEvent block id rootid =?", eventIdMatch);
+    // debugPush("debugeventScroll", eventScroll);
+    // debugPush("debugeventShowAll", eventShowAll);
+    // debugPush("debugGetRootScroll", eventProtyle.options.action.includes("cb-get-rootscroll"));
+    // debugPush("debugOption", eventProtyle.options);
+    debugPush("top-debugScrll", eventProtyle.scroll.lastScrollTop);
+    debugPush("top-debugOptionAcction", eventProtyle.options.action);
+    debugPush("top-debugscrool", eventProtyle);
+    debugPush("top-debugOptin", eventProtyle.options);
+    debugPush("top-debug-option-scroll-attr", JSON.stringify(eventProtyle.options.scrollAttr));
+    debugPush("top-debug-docId", event.detail.protyle.block.id);
+    // 在确定id 和 rootid一致
+    // if (eventProtyle.options.action.includes("cb-get-focus") && eventProtyle.options.action.includes("cb-get-scroll")) {
+
+    // } else {
+    //     if (eventProtyle.options.action.includes("") || eventProtyle.scroll.lastScrollTop == -1) {
+    //         return;
+    //     }
+    // }
+    // 判定块进度条跳转
+    if (eventProtyle.options.action.includes("") || eventProtyle.scroll.lastScrollTop == -1) {
+        debugPush("top-action列表为空或lastScrollTop=-1");
+        return;
+    }
+    // 判定特殊情况，从文档树或点击打开都有get-focus
+    if (!eventProtyle.options.action.includes("cb-get-focus")) {
+        debugPush("含getFocusAction");
+        return;
+    }
+    if (eventMode != 0) {
+        debugPush("eventMode!=0", eventMode);
+        return;
+    }
+    const curDocId = event.detail.protyle.block.id;
     if (event.detail.protyle.block.id) {
         // 新建文档不要响应
         const sqlResult = await sqlAPI(`SELECT id FROM blocks WHERE id = "${event.detail.protyle.block.id}"`);
         debugPush("Sqlresult", sqlResult);
         if (sqlResult.length == 0) {
-            debugPush("新文档，不top");
+            debugPush("top-新文档，不top");
             return ;
+        }
+    }
+    // 获取StartId
+    const docInfo = await getDocInfo(curDocId);
+    let startId = null;
+    if (isValidStr(docInfo.ial.scroll)) {
+        const docScrollAttr = JSON.parse(docInfo.ial.scroll);
+        if (isValidStr(docScrollAttr.focusId) && docScrollAttr.focusId !== docScrollAttr.startId) {
+            startId = docScrollAttr.focusId;
         }
     }
     
     setTimeout(()=>{
         const homeElem =  event.detail.protyle.scroll?.element?.previousElementSibling;
-        debugPush("homeElem", homeElem);
+        debugPush("top-homeElem", homeElem);
         homeElem?.click();
         logPush("Back top");
-    }, 270);
+        if (isValidStr(startId)) {
+            siyuan.showMessage(`检测到上次阅读<button id="og-back-last-area-btn" class="b3-button b3-button--white">跳转回上次位置</button>`, 7000, "info")
+            // pushMsg();
+            setTimeout(()=>{
+                document.getElementById("og-back-last-area-btn")?.addEventListener("click", async ()=>{
+                debugPush("debugdocInfo", await getDocInfo(curDocId));
+                openRefLink(null, startId);
+                });
+            }, 200);
+        }
+    }, 10);
     // setTimeout(()=>{
     //     debugPush("dispatched")
     // dispatchKeyEvent({
@@ -1131,6 +1195,11 @@ async function pushMsg(msg, timeout = 4500) {
         "timeout": timeout
     }
     return parseBody(request(url, data));
+}
+
+async function getDocInfo(docId) {
+    let url = `/api/block/getDocInfo`;
+    return parseBody(request(url, {id: docId}));
 }
 
 async function listDocsByPath({path, notebook = undefined, sort = undefined, maxListLength = undefined}) {

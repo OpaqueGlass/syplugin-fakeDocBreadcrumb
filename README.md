@@ -4,9 +4,6 @@
 
 > Most of this document was translated by Google Translate and GPT.
 
-> Current Version: v0.2.6 **New**: Option: Allow float window; **New**: Option: Override theme's breadcrumb separator; **Abolish**: Retry after error occurred.
-[Changelog (In Chinese)](CHANGELOG.md)
-
 ### Quick Start
 
 - Just turn on the plugin; (`Marketplace`--`Downloaded`--`Plugin`--`Fake Doc Breadcrumb`, click switch icon)
