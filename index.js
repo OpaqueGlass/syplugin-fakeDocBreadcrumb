@@ -125,10 +125,9 @@ class FakeDocBreadcrumb extends siyuan.Plugin {
 
     onunload() {
         this.el && this.el.remove();
-        removeObserver();
         removeStyle();
         removeMouseKeyboardListener();
-        this.eventBusInnerHandler();
+        this.offEventBusInnerHander();
         // 移除已经插入的部分
         [].forEach.call(document.querySelectorAll(".og-fake-doc-breadcrumb-container"), (elem)=>{
             elem.remove();
@@ -161,6 +160,7 @@ class FakeDocBreadcrumb extends siyuan.Plugin {
             setStyle();  
             removeMouseKeyboardListener();
             setMouseKeyboardListener();
+            this.offEventBusInnerHander();
             this.eventBusInnerHandler();
             debugPush("SAVED");
             settingDialog.destroy();
@@ -190,7 +190,9 @@ class FakeDocBreadcrumb extends siyuan.Plugin {
         settingDialog.element.querySelector(`#${CONSTANTS.PLUGIN_NAME}-form-content`).appendChild(hello);
     }
 
-    
+    /**
+     * 在这里启用eventBus事件监听，但请务必在offEventBusInnerHandler中设置对应的关闭
+     */
     eventBusInnerHandler() {
         if (g_setting.immediatelyUpdate) {
             this.eventBus.on("ws-main", eventBusHandler);
@@ -204,6 +206,15 @@ class FakeDocBreadcrumb extends siyuan.Plugin {
             // this.eventBus.off("switch-protyle", backTopEventBusHandler);
             this.eventBus.off("loaded-protyle-static", backTopEventBusWorker);
         }
+        this.eventBus.on("loaded-protyle-static", mainEventBusHander);
+        this.eventBus.on("switch-protyle", mainEventBusHander);
+    }
+
+    offEventBusInnerHander() {
+        this.eventBus.off("ws-main", eventBusHandler);
+        this.eventBus.off("loaded-protyle-static", backTopEventBusWorker);
+        this.eventBus.off("loaded-protyle-static", mainEventBusHander);
+        this.eventBus.off("switch-protyle", mainEventBusHander);
     }
 }
 
@@ -295,10 +306,8 @@ class SettingProperty {
 function initRetry() {
     let successFlag = false;
     try {
-        removeObserver();
         removeStyle();
         removeMouseKeyboardListener();
-        setObserver();
         setStyle();
         setMouseKeyboardListener();
         successFlag = true;
@@ -314,107 +323,18 @@ function initRetry() {
     return false;
 }
 
-
-/**
- * 设置监视器Observer
- */
-function setObserver() {
-    if (g_isMobile) {
-        g_switchTabObserver = new MutationObserver(async (mutationList) => {
-            for (let mutation of mutationList) {
-                // console.log("发现页签切换", mutation);
-                setTimeout(async () => {
-                    if (isDebugMode()) console.time(g_TIMER_LABLE_NAME_COMPARE);
-                    try{
-                        debugPush("由 移动端切换文档 触发");
-                        // TODO: 改为动态获取id
-                        await main([mutation.target]);
-                    }catch(err) {
-                        console.error(err);
-                    }
-                    if (isDebugMode()) console.timeEnd(g_TIMER_LABLE_NAME_COMPARE);
-                }, Math.round(Math.random() * CONSTANTS.OBSERVER_RANDOM_DELAY) + CONSTANTS.OBSERVER_RANDOM_DELAY_ADD);
-            }
-        });
-        g_switchTabObserver.observe(window.document.querySelector(".protyle-background[data-node-id]"), {"attributes": true, "attributeFilter": ["data-node-id"]});
-        debugPush("MOBILE_LOADED");
-        try {
-            debugPush("由 移动端立即执行 触发");
-            main();
-        } catch(err) {
-            debugPush("移动端立即main执行", err);
-        }
+async function mainEventBusHander(detail) {
+    // 相关判断方式参考： https://github.com/siyuan-note/siyuan/issues/9458#issuecomment-1773776115
+    detail = detail.detail;
+    const protyle = detail.protyle;
+    // 部分情况下，进入文档会停留在默认的聚焦，这里先运行了看看情况
+    if (protyle.model == null /* || protyle.block.showAll */) {
+        infoPush("插件内嵌Protyle、浮窗~~或聚焦~~。停止操作。");
         return;
     }
-    g_switchTabObserver = new MutationObserver(async (mutationList) => {
-        for (let mutation of mutationList) {
-            // console.log("发现页签切换", mutation);
-            setTimeout(async () => {
-                console.time(g_TIMER_LABLE_NAME_COMPARE);
-                try{
-                    // TODO: 改为动态获取id
-                    debugPush("由 页签切换 触发");
-                    await main([mutation.target]);
-                }catch(err) {
-                    errorPush(err);
-                }
-                console.timeEnd(g_TIMER_LABLE_NAME_COMPARE);
-            }, Math.round(Math.random() * CONSTANTS.OBSERVER_RANDOM_DELAY) + CONSTANTS.OBSERVER_RANDOM_DELAY_ADD);
-        }
-    });
-    g_windowObserver = new MutationObserver((mutationList) => {
-        for (let mutation of mutationList) {
-            // console.log("发现窗口变化", mutation);
-            if (mutation.removedNodes.length > 0 || mutation.addedNodes.length > 0) {
-                // console.log("断开Observer");
-                // tabBarObserver.disconnect();
-                g_switchTabObserver.disconnect();
-                clearInterval(g_observerRetryInterval);
-                g_observerRetryInterval = setInterval(observerRetry, CONSTANTS.OBSERVER_RETRY_INTERVAL);
-                // setInterval将不会立即执行，这里需要立即执行
-                observerRetry();
-            }
-            
-        }
-        
-    });
-    g_observerRetryInterval = setInterval(observerRetry, CONSTANTS.OBSERVER_RETRY_INTERVAL);
-    observerRetry();
-    g_windowObserver.observe(window.siyuan.layout.centerLayout.element, {childList: true});
-}
-/**
- * 重试页签监听
- */
-function observerRetry() {
-    g_tabbarElement = window.siyuan.layout.centerLayout.element.querySelectorAll("[data-type='wnd'] ul.layout-tab-bar");
-    if (g_tabbarElement.length > 0) {
-        // console.log("重新监视页签变化");
-        g_tabbarElement.forEach((element)=>{
-            g_switchTabObserver.observe(element, {"attributes": true, "attributeFilter": ["data-activetime"], "subtree": true});
-            
-            // 重启监听后立刻执行检查
-            if (element.children.length > 0) {
-                g_observerStartupRefreshTimeout = setTimeout(async () => {
-                    // console.time(g_TIMER_LABLE_NAME_COMPARE);
-                    try{
-                        // TODO
-                        debugPush("由 页签监听重新绑定 触发");
-                        await main(element.children);
-                    }catch (err) {
-                        errorPush(err);
-                    }
-                    // console.timeEnd(g_TIMER_LABLE_NAME_COMPARE);
-                }, Math.round(Math.random() * CONSTANTS.OBSERVER_RANDOM_DELAY) + CONSTANTS.OBSERVER_RANDOM_DELAY_ADD);
-            }
-        });
-        clearInterval(g_observerRetryInterval);
-    }
+    await main(protyle);
 }
 
-function removeObserver() {
-    g_switchTabObserver?.disconnect();
-    g_windowObserver?.disconnect();
-}
 
 async function eventBusHandler(detail) {
     // console.log(detail);
@@ -548,7 +468,7 @@ async function backTopEventBusWorker(event) {
     // }
 }
 
-async function main(targets) {
+async function main(eventProtyle) {
     if (g_isMobile) {
         await mobileMain();
         return;
@@ -566,7 +486,8 @@ async function main(targets) {
         try {   
             g_mutex++;
             // 获取当前文档id
-            const docId = getCurrentDocIdF();
+            // const docId = getCurrentDocIdF();
+            const docId = eventProtyle.block.rootID;
             if (!isValidStr(docId)) {
                 failDueToEmptyId = true;
                 debugPush(`第${retryCount}次获取文档id失败，休息一会儿后重新尝试`);
@@ -592,7 +513,7 @@ async function main(targets) {
             let element = await generateElement(pathObject, docId);
             debugPush("ELEMT", element);
             // 插入显示元素和设置监听
-            setAndApply(element, docId);
+            setAndApply(element, docId, eventProtyle);
             success = true;
         }catch(err){
             warnPush(err);
@@ -823,25 +744,26 @@ async function generateElement(pathObjects, docId) {
     
 }
 
-function setAndApply(element, docId) {
+function setAndApply(element, docId, eventProtyle) {
+    const protyleElem = eventProtyle.element;
     // TODO: 移除已有的面包屑
-    const tempOldElem = window.top.document.querySelector(`.layout__wnd--active .fn__flex-1.protyle:has(.protyle-background[data-node-id="${docId}"]) .og-fake-doc-breadcrumb-container`);
-    debugPush("setAndApply定位原有面包屑全部匹配结果", window.top.document.querySelectorAll(`.layout__wnd--active .fn__flex-1.protyle:has(.protyle-background[data-node-id="${docId}"]) .og-fake-doc-breadcrumb-container`));
-    debugPush("setAndApply定位文档位置全部匹配结果", window.top.document.querySelectorAll(`.layout__wnd--active .fn__flex-1.protyle:has(.protyle-background[data-node-id="${docId}"]) .protyle-breadcrumb__bar`));
+    const tempOldElem = protyleElem.querySelector(`.og-fake-doc-breadcrumb-container`);
+    debugPush("setAndApply定位原有面包屑全部匹配结果", protyleElem.querySelectorAll(`.og-fake-doc-breadcrumb-container`));
+    debugPush("setAndApply定位文档位置全部匹配结果", protyleElem.querySelectorAll(`.protyle-breadcrumb__bar`));
     if (tempOldElem) {
         tempOldElem.remove();
         debugPush("移除原有面包屑成功");
     }
 
     if (g_setting.oneLineBreadcrumb) {
-        const elem = window.top.document.querySelector(`.layout__wnd--active .fn__flex-1.protyle:has(.protyle-background[data-node-id="${docId}"]) .protyle-breadcrumb__bar`);
+        const elem = protyleElem.querySelector(`.protyle-breadcrumb__bar`);
         if (elem) {
             elem.insertAdjacentElement("beforebegin", element);
         }else{
             debugPush("可能是由于没有焦点不再文档上");
         }
     }else{
-        const elem = window.top.document.querySelector(`.layout__wnd--active .fn__flex-1.protyle:has(.protyle-background[data-node-id="${docId}"]) .protyle-breadcrumb`);
+        const elem = protyleElem.querySelector(`.protyle-breadcrumb`);
         if (elem) {
             elem.insertAdjacentElement("beforebegin",element);
         } else {
@@ -850,15 +772,15 @@ function setAndApply(element, docId) {
     }
     debugPush("重写面包屑成功");
     
-    [].forEach.call(window.document.querySelectorAll(`.og-fake-doc-breadcrumb-container .fake-breadcrumb-click[data-type="FILE"]`), (elem)=>{
+    [].forEach.call(protyleElem.querySelectorAll(`.og-fake-doc-breadcrumb-container .fake-breadcrumb-click[data-type="FILE"]`), (elem)=>{
         elem.removeEventListener("click", openRefLink);
         elem.addEventListener("click", openRefLink);
     });
-    [].forEach.call(window.document.querySelectorAll(`.og-fake-doc-breadcrumb-container .fake-breadcrumb-click[data-type="..."]`), (elem)=>{
+    [].forEach.call(protyleElem.querySelectorAll(`.og-fake-doc-breadcrumb-container .fake-breadcrumb-click[data-type="..."]`), (elem)=>{
         elem.removeEventListener("click", openHideMenu);
         elem.addEventListener("click", openHideMenu);
     });
-    [].forEach.call(window.document.querySelectorAll(`.og-fake-doc-breadcrumb-container .${CONSTANTS.ARROW_SPAN_NAME}[data-type="FILE"], .og-fake-doc-breadcrumb-container .${CONSTANTS.ARROW_SPAN_NAME}[data-type="NOTEBOOK"]`), (elem)=>{
+    [].forEach.call(protyleElem.querySelectorAll(`.og-fake-doc-breadcrumb-container .${CONSTANTS.ARROW_SPAN_NAME}[data-type="FILE"], .og-fake-doc-breadcrumb-container .${CONSTANTS.ARROW_SPAN_NAME}[data-type="NOTEBOOK"]`), (elem)=>{
         elem.removeEventListener("click", openRelativeMenu);
         elem.addEventListener("click", openRelativeMenu);
     });
