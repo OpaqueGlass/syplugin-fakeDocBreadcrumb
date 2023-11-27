@@ -1046,6 +1046,11 @@ function setStyle() {
     .og-fdb-mobile-btn-path-folded {
 
     }
+    /* 覆盖savor主题样式 */
+    .og-fake-doc-breadcrumb-container .protyle-breadcrumb__item:first-child::before {
+        content: "";
+        margin-right: 0px;
+    }
     `;
     head.appendChild(style);
 }
