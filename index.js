@@ -1065,7 +1065,7 @@ function setStyle() {
 
     }
     /* 覆盖savor主题样式 */
-    .og-fake-doc-breadcrumb-container .protyle-breadcrumb__item:first-child::before {
+    .og-fake-doc-breadcrumb-container.protyle-breadcrumb>.protyle-breadcrumb__bar .protyle-breadcrumb__item:first-child::before {
         content: "";
         margin-right: 0px;
     }
