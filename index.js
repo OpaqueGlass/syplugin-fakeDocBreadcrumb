@@ -715,6 +715,10 @@ async function generateElement(pathObjects, docId) {
                 .replaceAll("%3%", onePathObject.type)
                 .replaceAll("%FLOATWINDOW%", g_setting.allowFloatWindow && onePathObject.type == "FILE" ? `data-type="block-ref" data-subtype="d" data-id="${onePathObject.id}"` : "");
         }
+        // 最后一个文档、且不含子文档跳出判断
+        if (i == pathObjects.length - 1 && !await isChildDocExist(onePathObject.id)) {
+            continue;
+        }
         htmlStr += divideArrow
             .replaceAll("%4%", onePathObject.type)
             .replaceAll("%5%", pathObjects[i].id);
@@ -744,7 +748,15 @@ async function generateElement(pathObjects, docId) {
     // result.style.top = (window.document.querySelector(`.fn__flex-1.protyle:has(.protyle-background[data-node-id="${docId}"]) .protyle-breadcrumb`).clientHeight) + "px";
     // 修改以使得内容下移30px .protyle-content
     return result;
-    
+    async function isChildDocExist(id) {
+        const sqlResponse = await sqlAPI(`
+        SELECT * FROM blocks WHERE path like '%${id}/%' LIMIT 3
+        `);
+        if (sqlResponse && sqlResponse.length > 0) {
+            return true;
+        }
+        return false;
+    }
 }
 
 function setAndApply(element, docId, eventProtyle) {
