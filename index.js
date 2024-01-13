@@ -774,23 +774,26 @@ function setAndApply(element, docId, eventProtyle) {
         }
     }
     debugPush("重写面包屑成功");
-    
+    // v0.2.10应该是修改为仅范围内生效了，或许不再需要remove了
     [].forEach.call(protyleElem.querySelectorAll(`.og-fake-doc-breadcrumb-container .fake-breadcrumb-click[data-type="FILE"]`), (elem)=>{
-        elem.removeEventListener("click", openRefLink);
-        elem.addEventListener("click", openRefLink);
+        elem.removeEventListener("click", openRefLinkAgent);
+        elem.addEventListener("click", openRefLinkAgent);
     });
     [].forEach.call(protyleElem.querySelectorAll(`.og-fake-doc-breadcrumb-container .fake-breadcrumb-click[data-type="..."]`), (elem)=>{
-        elem.removeEventListener("click", openHideMenu);
-        elem.addEventListener("click", openHideMenu);
+        elem.removeEventListener("click", openHideMenu.bind(null, protyleElem));
+        elem.addEventListener("click", openHideMenu.bind(null, protyleElem));
     });
     [].forEach.call(protyleElem.querySelectorAll(`.og-fake-doc-breadcrumb-container .${CONSTANTS.ARROW_SPAN_NAME}[data-type="FILE"], .og-fake-doc-breadcrumb-container .${CONSTANTS.ARROW_SPAN_NAME}[data-type="NOTEBOOK"]`), (elem)=>{
-        elem.removeEventListener("click", openRelativeMenu);
-        elem.addEventListener("click", openRelativeMenu);
+        elem.removeEventListener("click", openRelativeMenu.bind(null, protyleElem));
+        elem.addEventListener("click", openRelativeMenu.bind(null, protyleElem));
     });
     // setDisplayHider();
+    function openRefLinkAgent(event) {
+        openRefLink(event, null, null, null, protyleElem);
+    }
 }
 
-function openHideMenu(event) {
+function openHideMenu(protyleElem, event) {
     let ids = JSON.parse(event.currentTarget.getAttribute("data-node-id").replaceAll(`'`, `"`));
     let names = JSON.parse(event.currentTarget.getAttribute("data-node-names").replaceAll(`'`, `"`));
     let rect = event.currentTarget.getBoundingClientRect();
@@ -814,7 +817,7 @@ function openHideMenu(event) {
                 openRefLink(undefined, docId, {
                     ctrlKey: event?.ctrlKey,
                     shiftKey: event?.shiftKey,
-                    altKey: event?.altKey});
+                    altKey: event?.altKey}, protyleElem);
             }
         }
         tempMenu.addItem(tempMenuItemObj);
@@ -824,7 +827,7 @@ function openHideMenu(event) {
 }
 
 
-async function openRelativeMenu(event) {
+async function openRelativeMenu(protyleElem, event) {
     let id = event.currentTarget.getAttribute("data-parent-id");
     let rect = event.currentTarget.getBoundingClientRect();
     event.stopPropagation();
@@ -856,7 +859,7 @@ async function openRelativeMenu(event) {
                 openRefLink(undefined, docId, {
                     ctrlKey: event?.ctrlKey,
                     shiftKey: event?.shiftKey,
-                    altKey: event?.altKey});
+                    altKey: event?.altKey}, protyleElem);
             }
         }
         if (currSibling.icon != "" && currSibling.icon.indexOf(".") == -1) {
@@ -1191,10 +1194,12 @@ function getCurrentDocIdF() {
  * 为引入本项目，和原代码相比有更改
  * @refer https://github.com/leolee9086/cc-template/blob/6909dac169e720d3354d77685d6cc705b1ae95be/baselib/src/commonFunctionsForSiyuan.js#L118-L141
  * @license 木兰宽松许可证
- * @param {点击事件} event 
+ * @param {点击事件} event
+ * @param {paramId} docId，此项仅在event对应的发起Elem上找不到data node id的情况下使用
+ * @param {keyParam} event的Key，主要是ctrlKey shiftKey等，此项仅在event无效时使用
+ * @param {protyle} 如果不为空打开文档点击事件将在该Elem上发起
  */
-let openRefLink = function(event, paramId = "", keyParam = undefined){
-    
+function openRefLink(event, paramId = "", keyParam = undefined, protyleElem = undefined){
     let 主界面= window.parent.document
     let id;
     if (event && event.currentTarget && event.currentTarget.getAttribute("data-node-id")) {
@@ -1211,7 +1216,11 @@ let openRefLink = function(event, paramId = "", keyParam = undefined){
     虚拟链接.setAttribute("data-type","block-ref")
     虚拟链接.setAttribute("data-id",id)
     虚拟链接.style.display = "none";//不显示虚拟链接，防止视觉干扰
-    let 临时目标 = 主界面.querySelector(".protyle-wysiwyg div[data-node-id] div[contenteditable]")
+    let 临时目标 = 主界面.querySelector(".protyle-wysiwyg div[data-node-id] div[contenteditable]");
+    // 如果提供了目标protyle，在其中插入
+    if (protyleElem) {
+        临时目标 = protyleElem.querySelector(".protyle-wysiwyg div[data-node-id] div[contenteditable]") ?? protyleElem;
+    }
     临时目标.appendChild(虚拟链接);
     let clickEvent = new MouseEvent("click", {
         ctrlKey: event?.ctrlKey ?? keyParam?.ctrlKey,
