@@ -25,6 +25,10 @@
     "setting_backTopAfterOpenDoc_desp": "Disables document editing cursor position memory in disguise; serious problems may exist, use caution",
     "setting_notOnlyOpenDocs_name": "🧪🆕Enable doc breadcrumb for more circumstance",
     "setting_notOnlyOpenDocs_desp": "Other ways of invoking editors besides opening documents normally also try to insert document crumbs; may conflict with other plug-ins, in-panel editors; ⚠Do not enable unless you understand what is happening",
+    "setting_preferOpenInCurrentSplit_name": "🧪🆕Open the document in the split-screen area where the breadcrumb is located",
+    "setting_preferOpenInCurrentSplit_desp": "When disabled, the plug-in opens documents in the current split-screen area with focus; note that in the current implementation, even if enabled, documents already open in other split-screens cannot be opened in the current split-screen area",
+    "setting_RESERVE_HINT_name": "There are many settings, scroll up or down to view more.",
+    "setting_RESERVE_HINT_desp": "The latest settings are usually located at the bottom.",
 
     "setting_experimental": "(Experimental Feature. UNSTABLE. May be removed at any time) ",
 

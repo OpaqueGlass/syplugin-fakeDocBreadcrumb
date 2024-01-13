@@ -23,8 +23,12 @@
     "setting_mainRetry_desp": "如果未能显示，将间隔200ms进行重试。由于新创建的文档未入数据库，该设置对新创建的文档无效。",
     "setting_backTopAfterOpenDoc_name": "🧪打开文档后定位到文档开头",
     "setting_backTopAfterOpenDoc_desp": "变相禁用文档编辑光标位置记忆；⚠测试中，如有问题请反馈；",
-    "setting_notOnlyOpenDocs_name": "🧪🆕禁用”仅文档插入“",
+    "setting_notOnlyOpenDocs_name": "🧪🆕在更多情况下显示文档面包屑",
     "setting_notOnlyOpenDocs_desp": "除了正常打开文档之外，其他由<code>loaded-protyle</code>事件调起的编辑器也尝试插入文档面包屑；可能与其他插件、面板内编辑器产生冲突；⚠除非您了解发生了什么，否则请勿使用",
+    "setting_preferOpenInCurrentSplit_name": "🧪🆕在面包屑所在分屏区打开文档",
+    "setting_preferOpenInCurrentSplit_desp": "禁用后，插件将在当前具有焦点的分屏区打开文档；请注意：在目前的实现中，即使启用，也不能在当前分屏区打开已经在其他分屏区打开的文档",
+    "setting_RESERVE_HINT_name": "设置比较多，上下滑动/滚动查看更多",
+    "setting_RESERVE_HINT_desp": "这个设置页咱就不改了，挺麻烦的:) 最新的设置一般在下面",
 
     "setting_experimental": "（实验性功能，不稳定，可能随时被移除）",
 

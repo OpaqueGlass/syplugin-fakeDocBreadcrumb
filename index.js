@@ -58,6 +58,7 @@ let g_setting = {
     "usePluginArrow": null,
     "mainRetry": null, // 主函数重试次数
     "backTopAfterOpenDoc": null,
+    "preferOpenInCurrentSplit": null,
 };
 let g_setting_default = {
     "nameMaxLength": 15,
@@ -74,6 +75,7 @@ let g_setting_default = {
     "mainRetry": 5, // 主函数重试次数
     "backTopAfterOpenDoc": false, // 打开新文档后返回文档开头（变相禁用文档浏览位置记忆）
     "notOnlyOpenDocs": false, // 除了打开的文档之外，不再判断load-protyle调用来源，一律执行面包屑插入，可能带来不期待的后果
+    "preferOpenInCurrentSplit": true,
 };
 /**
  * Plugin类
@@ -173,6 +175,7 @@ class FakeDocBreadcrumb extends siyuan.Plugin {
         const settingForm = document.createElement("form");
         settingForm.setAttribute("name", CONSTANTS.PLUGIN_NAME);
         settingForm.innerHTML = generateSettingPanelHTML([
+            new SettingProperty("RESERVE_HINT", "HINT", null),
             new SettingProperty("docMaxNum", "NUMBER", [0, 1024]),
             new SettingProperty("nameMaxLength", "NUMBER", [0, 1024]),
             new SettingProperty("showNotebook", "SWITCH", null),
@@ -180,12 +183,12 @@ class FakeDocBreadcrumb extends siyuan.Plugin {
             new SettingProperty("oneLineBreadcrumb", "SWITCH", null),
             new SettingProperty("foldedFrontShow", "NUMBER", [0, 8]),
             new SettingProperty("foldedEndShow", "NUMBER", [0, 8]),
-            new SettingProperty("immediatelyUpdate", "SWITCH", null),
             new SettingProperty("allowFloatWindow", "SWITCH", null),
             new SettingProperty("usePluginArrow", "SWITCH", null),
             new SettingProperty("mainRetry", "NUMBER", [0, 20]),
             new SettingProperty("backTopAfterOpenDoc", "SWITCH", null),
             new SettingProperty("notOnlyOpenDocs", "SWITCH", null),
+            new SettingProperty("preferOpenInCurrentSplit", "SWITCH", null),
         ]);
 
         hello.appendChild(settingForm);
@@ -196,7 +199,7 @@ class FakeDocBreadcrumb extends siyuan.Plugin {
      * 在这里启用eventBus事件监听，但请务必在offEventBusInnerHandler中设置对应的关闭
      */
     eventBusInnerHandler() {
-        if (g_setting.immediatelyUpdate) {
+        if (false && g_setting.immediatelyUpdate) {
             this.eventBus.on("ws-main", eventBusHandler);
         }else{
             this.eventBus.off("ws-main", eventBusHandler);
@@ -1207,11 +1210,12 @@ function getCurrentDocIdF() {
  * @refer https://github.com/leolee9086/cc-template/blob/6909dac169e720d3354d77685d6cc705b1ae95be/baselib/src/commonFunctionsForSiyuan.js#L118-L141
  * @license 木兰宽松许可证
  * @param {点击事件} event
- * @param {paramId} docId，此项仅在event对应的发起Elem上找不到data node id的情况下使用
- * @param {keyParam} event的Key，主要是ctrlKey shiftKey等，此项仅在event无效时使用
- * @param {protyle} 如果不为空打开文档点击事件将在该Elem上发起
+ * @param {string} docId，此项仅在event对应的发起Elem上找不到data node id的情况下使用
+ * @param {keyParam} keyParam event的Key，主要是ctrlKey shiftKey等，此项仅在event无效时使用
+ * @param {protyle} protyle 如果不为空打开文档点击事件将在该Elem上发起
+ * @param {boolean} openInFocus 在当前聚焦的窗口中打开
  */
-function openRefLink(event, paramId = "", keyParam = undefined, protyleElem = undefined){
+function openRefLink(event, paramId = "", keyParam = undefined, protyleElem = undefined, openInFocus = !g_setting.preferOpenInCurrentSplit){
     let 主界面= window.parent.document
     let id;
     if (event && event.currentTarget && event.currentTarget.getAttribute("data-node-id")) {
@@ -1232,6 +1236,19 @@ function openRefLink(event, paramId = "", keyParam = undefined, protyleElem = un
     // 如果提供了目标protyle，在其中插入
     if (protyleElem) {
         临时目标 = protyleElem.querySelector(".protyle-wysiwyg div[data-node-id] div[contenteditable]") ?? protyleElem;
+        debugPush("使用提供窗口", 临时目标);
+    }
+    debugPush("openInFocus?", openInFocus);
+    if (openInFocus) {
+        // 先确定Tab
+        const dataId = 主界面.querySelector(".layout__wnd--active .layout-tab-bar .item--focus")?.getAttribute("data-id");
+        debugPush("尝试使用聚焦窗口", dataId);
+        // 再确定Protyle
+        if (isValidStr(dataId)) {
+            临时目标 = window.document.querySelector(`.fn__flex-1.protyle[data-id='${dataId}']
+            .protyle-wysiwyg div[data-node-id] div[contenteditable]`);
+            debugPush("使用聚焦窗口", 临时目标);
+        }
     }
     临时目标.appendChild(虚拟链接);
     let clickEvent = new MouseEvent("click", {
@@ -1368,6 +1385,10 @@ function generateSettingPanelHTML(settingObjectArray) {
                         *#*##*#*
                     </div>
                 </label>`
+                break;
+            }
+            case "HINT": {
+                inputElemStr = ``;
                 break;
             }
         }
