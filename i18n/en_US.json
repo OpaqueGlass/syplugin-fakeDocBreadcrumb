@@ -23,6 +23,8 @@
     "setting_mainRetry_desp": "If unable to display, retry specified number of times with an interval of 200ms.",
     "setting_backTopAfterOpenDoc_name": "🧪🆕⚠Open the document and jump to the beginning of the document",
     "setting_backTopAfterOpenDoc_desp": "Disables document editing cursor position memory in disguise; serious problems may exist, use caution",
+    "setting_notOnlyOpenDocs_name": "🧪🆕禁用”仅文档插入“",
+    "setting_notOnlyOpenDocs_desp": "除了正常打开文档之外，其他方式调起的编辑器也尝试插入文档面包屑；可能与其他插件、面板内编辑器产生冲突；⚠除非您了解发生了什么，否则请勿使用",
 
     "setting_experimental": "(Experimental Feature. UNSTABLE. May be removed at any time) ",
 

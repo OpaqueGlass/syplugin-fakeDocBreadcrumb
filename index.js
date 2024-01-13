@@ -73,6 +73,7 @@ let g_setting_default = {
     "usePluginArrow": true, // 使用挂件>箭头
     "mainRetry": 5, // 主函数重试次数
     "backTopAfterOpenDoc": false, // 打开新文档后返回文档开头（变相禁用文档浏览位置记忆）
+    "notOnlyOpenDocs": false, // 除了打开的文档之外，不再判断load-protyle调用来源，一律执行面包屑插入，可能带来不期待的后果
 };
 /**
  * Plugin类
@@ -184,6 +185,7 @@ class FakeDocBreadcrumb extends siyuan.Plugin {
             new SettingProperty("usePluginArrow", "SWITCH", null),
             new SettingProperty("mainRetry", "NUMBER", [0, 20]),
             new SettingProperty("backTopAfterOpenDoc", "SWITCH", null),
+            new SettingProperty("notOnlyOpenDocs", "SWITCH", null),
         ]);
 
         hello.appendChild(settingForm);
@@ -328,10 +330,11 @@ async function mainEventBusHander(detail) {
     detail = detail.detail;
     const protyle = detail.protyle;
     // 部分情况下，进入文档会停留在默认的聚焦，这里先运行了看看情况
-    if (protyle.model == null /* || protyle.block.showAll */) {
-        infoPush("插件内嵌Protyle、浮窗~~或聚焦~~。停止操作。");
+    if (protyle.model == null && !g_setting.notOnlyOpenDocs /* || protyle.block.showAll */) {
+        infoPush("插件内嵌Protyle、浮窗~~或聚焦~~。停止操作。", protyle);
         return;
     }
+    debugPush("正确Protyle", protyle);
     await main(protyle);
 }
 
@@ -1203,6 +1206,7 @@ let openRefLink = function(event, paramId = "", keyParam = undefined){
     if (!isValidStr(id)) {return;}
     event?.preventDefault();
     event?.stopPropagation();
+    debugPush("openRefLinkEvent", event);
     let 虚拟链接 =  主界面.createElement("span")
     虚拟链接.setAttribute("data-type","block-ref")
     虚拟链接.setAttribute("data-id",id)
