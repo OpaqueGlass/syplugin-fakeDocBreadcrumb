@@ -804,7 +804,7 @@ function setAndApply(element, docId, eventProtyle) {
     });
     // setDisplayHider();
     function openRefLinkAgent(event) {
-        openRefLink(event, null, null, null, protyleElem);
+        openRefLink(event, null, null, protyleElem);
     }
 }
 
@@ -1212,8 +1212,8 @@ function getCurrentDocIdF() {
  * @param {点击事件} event
  * @param {string} docId，此项仅在event对应的发起Elem上找不到data node id的情况下使用
  * @param {keyParam} keyParam event的Key，主要是ctrlKey shiftKey等，此项仅在event无效时使用
- * @param {protyle} protyle 如果不为空打开文档点击事件将在该Elem上发起
- * @param {boolean} openInFocus 在当前聚焦的窗口中打开
+ * @param {protyle} protyleElem 如果不为空打开文档点击事件将在该Elem上发起
+ * @param {boolean} openInFocus 在当前聚焦的窗口中打开，给定此项为true，则优于protyle选项生效
  */
 function openRefLink(event, paramId = "", keyParam = undefined, protyleElem = undefined, openInFocus = !g_setting.preferOpenInCurrentSplit){
     let 主界面= window.parent.document
@@ -1232,23 +1232,27 @@ function openRefLink(event, paramId = "", keyParam = undefined, protyleElem = un
     虚拟链接.setAttribute("data-type","block-ref")
     虚拟链接.setAttribute("data-id",id)
     虚拟链接.style.display = "none";//不显示虚拟链接，防止视觉干扰
-    let 临时目标 = 主界面.querySelector(".protyle-wysiwyg div[data-node-id] div[contenteditable]");
+    let 临时目标 = null;
     // 如果提供了目标protyle，在其中插入
-    if (protyleElem) {
+    if (protyleElem && !openInFocus) {
         临时目标 = protyleElem.querySelector(".protyle-wysiwyg div[data-node-id] div[contenteditable]") ?? protyleElem;
-        debugPush("使用提供窗口", 临时目标);
+        debugPush("openRefLink使用提供窗口", 临时目标);
     }
     debugPush("openInFocus?", openInFocus);
     if (openInFocus) {
         // 先确定Tab
         const dataId = 主界面.querySelector(".layout__wnd--active .layout-tab-bar .item--focus")?.getAttribute("data-id");
-        debugPush("尝试使用聚焦窗口", dataId);
+        debugPush("openRefLink尝试使用聚焦窗口", dataId);
         // 再确定Protyle
         if (isValidStr(dataId)) {
             临时目标 = window.document.querySelector(`.fn__flex-1.protyle[data-id='${dataId}']
             .protyle-wysiwyg div[data-node-id] div[contenteditable]`);
-            debugPush("使用聚焦窗口", 临时目标);
+            debugPush("openRefLink使用聚焦窗口", 临时目标);
         }
+    }
+    if (!isValidStr(临时目标)) {
+        临时目标 = 主界面.querySelector(".protyle-wysiwyg div[data-node-id] div[contenteditable]");
+        debugPush("openRefLink未能找到指定窗口，更改为原状态");
     }
     临时目标.appendChild(虚拟链接);
     let clickEvent = new MouseEvent("click", {
