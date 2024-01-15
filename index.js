@@ -764,7 +764,7 @@ async function generateElement(pathObjects, docId) {
 
 function setAndApply(element, docId, eventProtyle) {
     const protyleElem = eventProtyle.element;
-    // TODO: 移除已有的面包屑
+    // 移除已有的面包屑
     const tempOldElem = protyleElem.querySelector(`.og-fake-doc-breadcrumb-container`);
     debugPush("setAndApply定位原有面包屑全部匹配结果", protyleElem.querySelectorAll(`.og-fake-doc-breadcrumb-container`));
     debugPush("setAndApply定位文档位置全部匹配结果", protyleElem.querySelectorAll(`.protyle-breadcrumb__bar`));
@@ -773,7 +773,11 @@ function setAndApply(element, docId, eventProtyle) {
         debugPush("移除原有面包屑成功");
     }
 
-    if (g_setting.oneLineBreadcrumb) {
+    // 判断是否为抽认卡页面，若为抽认卡页面，强制分行显示
+    let isCardPage = protyleElem.classList.contains("card__block");
+    debugPush("是否为抽认卡页面", isCardPage);
+    // 分行或同行插入处理
+    if (g_setting.oneLineBreadcrumb && !isCardPage) {
         const elem = protyleElem.querySelector(`.protyle-breadcrumb__bar`);
         if (elem) {
             elem.insertAdjacentElement("beforebegin", element);
@@ -1229,8 +1233,8 @@ function openRefLink(event, paramId = "", keyParam = undefined, protyleElem = un
     event?.stopPropagation();
     debugPush("openRefLinkEvent", event);
     let 虚拟链接 =  主界面.createElement("span")
-    虚拟链接.setAttribute("data-type","block-ref")
-    虚拟链接.setAttribute("data-id",id)
+    虚拟链接.setAttribute("data-type","a")
+    虚拟链接.setAttribute("data-href", "siyuan://blocks/" + id)
     虚拟链接.style.display = "none";//不显示虚拟链接，防止视觉干扰
     let 临时目标 = null;
     // 如果提供了目标protyle，在其中插入
