@@ -1156,7 +1156,8 @@ async function getDocInfo(docId) {
 
 async function listDocsByPath({path, notebook = undefined, sort = undefined, maxListLength = undefined}) {
     let data = {
-        path: path
+        path: path,
+        "ignoreMaxListHint": true
     };
     if (notebook) data["notebook"] = notebook;
     if (sort) data["sort"] = sort;
