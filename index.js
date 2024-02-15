@@ -806,9 +806,17 @@ function setAndApply(element, docId, eventProtyle) {
         elem.removeEventListener("click", openRelativeMenu.bind(null, protyleElem));
         elem.addEventListener("click", openRelativeMenu.bind(null, protyleElem));
     });
+    [].forEach.call(protyleElem.querySelectorAll(`.og-fake-doc-breadcrumb-container .protyle-breadcrumb__bar`), (elem)=>{
+        elem.removeEventListener("mousewheel", scrollConvert.bind(null, elem), true);
+        elem.addEventListener("mousewheel", scrollConvert.bind(null, elem), true);
+    });
     // setDisplayHider();
     function openRefLinkAgent(event) {
         openRefLink(event, null, null, protyleElem);
+    }
+    function scrollConvert(elem, event) {
+        logPush("eventScrool", event.deltaY, elem, elem.scrollLeft);
+        elem.scrollLeft = elem.scrollLeft + event.deltaY;
     }
 }
 
@@ -999,6 +1007,7 @@ function setStyle() {
     style.innerHTML = `
     .og-breadcrumb-oneline {
         margin-right: 3px;
+        overflow-x: auto; /* 滚动查看，oneline套了一层div所以也得加overflow */
     }
     
     .${CONSTANTS.CONTAINER_CLASS_NAME} .protyle-breadcrumb__text {
