@@ -30,6 +30,8 @@
     "setting_RESERVE_HINT_name": "There are many settings, scroll up or down to view more.",
     "setting_RESERVE_HINT_desp": "The latest settings are usually located at the bottom.",
 
+    "conflict_plugin_oneline_breadcrumb": "Detected conflicting plugins (occupying the line below breadcrumbs). The fakeDocBreadcrumb plugin suggest enable the \"🧪 Display the document breadcrumb on the same line as the block breadcrumb\" feature.",
+
     "setting_experimental": "(Experimental Feature. UNSTABLE. May be removed at any time) ",
 
     "error_initFailed": "HierarchyNavigation Plugin initialization failed, please report this issue to developer at your convenience",

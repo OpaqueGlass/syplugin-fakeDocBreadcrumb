@@ -30,6 +30,8 @@
     "setting_RESERVE_HINT_name": "设置比较多，上下滑动/滚动查看更多",
     "setting_RESERVE_HINT_desp": "这个设置页咱就不改了，挺麻烦的:) 最新的设置一般在下面",
 
+    "conflict_plugin_oneline_breadcrumb": "检测到冲突插件（占用面包屑下方一行），建议启用文档面包屑插件的“🧪与块面包屑在同一行显示”功能",
+
     "setting_experimental": "（实验性功能，不稳定，可能随时被移除）",
 
     "error_initFailed": "文档面包屑插件初始化失败，如果可以，请向开发者反馈此问题",

@@ -31,6 +31,7 @@ const CONSTANTS = {
     POP_LIMIT: 1,
     POP_ALL: 2,
     MAX_NAME_LENGTH: 15,
+    MULTILINE_CONFLICT_PLUGINS: ["siyuan-plugin-toolbar-plus"],
 }
 let g_observerRetryInterval;
 let g_observerStartupRefreshTimeout;
@@ -67,7 +68,7 @@ let g_setting_default = {
     "typeHide": false,
     "foldedFrontShow": 2,
     "foldedEndShow": 3,
-    "oneLineBreadcrumb": true,
+    "oneLineBreadcrumb": false,
     "timelyUpdate": true, // 及时响应更新
     "immediatelyUpdate": false, // 实时响应更新
     "allowFloatWindow": false, // 触发浮窗
@@ -90,6 +91,9 @@ class FakeDocBreadcrumb extends siyuan.Plugin {
         // 读取配置
         // TODO: 读取配置API变更
         Object.assign(g_setting, g_setting_default);
+        if (isSomePluginExist(this.app.plugins, CONSTANTS.MULTILINE_CONFLICT_PLUGINS)) {
+            g_setting.oneLineBreadcrumb = true;
+        }
 
         g_writeStorage = this.saveData;
         
@@ -157,6 +161,9 @@ class FakeDocBreadcrumb extends siyuan.Plugin {
         actionButtons[1].addEventListener("click",()=>{
             debugPush('SAVING');
             let uiSettings = loadUISettings(settingForm);
+            if (isSomePluginExist(this.app.plugins, CONSTANTS.MULTILINE_CONFLICT_PLUGINS) && uiSettings.oneLineBreadcrumb == false) {
+                siyuan.showMessage(`${language["conflict_plugin_oneline_breadcrumb"]}<br/> ——[${this.name}]`, 13000);
+            }
             this.saveData(`settings.json`, JSON.stringify(uiSettings));
             Object.assign(g_setting, uiSettings);
             removeStyle();
@@ -736,7 +743,7 @@ async function generateElement(pathObjects, docId) {
     let result = document.createElement("div");
     let barElement = document.createElement("div");
     barElement.classList.add("protyle-breadcrumb__bar");
-    barElement.classList.add("protyle-breadcrumb__bar--nowrap");
+    // barElement.classList.add("protyle-breadcrumb__bar--nowrap");
     barElement.innerHTML = htmlStr;
     result.appendChild(barElement);
     result.classList.add(CONSTANTS.CONTAINER_CLASS_NAME);
@@ -762,7 +769,7 @@ async function generateElement(pathObjects, docId) {
     }
 }
 
-function setAndApply(element, docId, eventProtyle) {
+function setAndApply(finalElement, docId, eventProtyle) {
     const protyleElem = eventProtyle.element;
     // 移除已有的面包屑
     const tempOldElem = protyleElem.querySelector(`.og-fake-doc-breadcrumb-container`);
@@ -780,18 +787,37 @@ function setAndApply(element, docId, eventProtyle) {
     if (g_setting.oneLineBreadcrumb && !isCardPage) {
         const elem = protyleElem.querySelector(`.protyle-breadcrumb__bar`);
         if (elem) {
-            elem.insertAdjacentElement("beforebegin", element);
+            elem.insertAdjacentElement("beforebegin", finalElement);
         }else{
             debugPush("可能是由于没有焦点不再文档上");
         }
     }else{
         const elem = protyleElem.querySelector(`.protyle-breadcrumb`);
         if (elem) {
-            elem.insertAdjacentElement("beforebegin",element);
+            elem.insertAdjacentElement("beforebegin",finalElement);
         } else {
             debugPush("可能是由于焦点不在文档上");
         }
     }
+    // 修改长度
+    let isAdjustFinished = false;
+    // 面包屑项
+    const itemElements = finalElement.querySelectorAll(".protyle-breadcrumb__item ");
+    while (finalElement.scrollHeight > 30 && !isAdjustFinished && itemElements.length > 1) {
+        [].find.call(itemElements, ((item, index) => {
+            if (index > 0) {
+                if (!item.classList.contains("protyle-breadcrumb__text--ellipsis")) {
+                    item.classList.add("protyle-breadcrumb__text--ellipsis");
+                    return true;
+                }
+                if (index === itemElements.length - 1 && item.classList.contains("protyle-breadcrumb__text--ellipsis")) {
+                    isAdjustFinished = true;
+                }
+            }
+        }));
+    }
+    finalElement.firstChild.classList.add("protyle-breadcrumb__bar--nowrap");
+
     debugPush("重写面包屑成功");
     // v0.2.10应该是修改为仅范围内生效了，或许不再需要remove了
     [].forEach.call(protyleElem.querySelectorAll(`.og-fake-doc-breadcrumb-container .fake-breadcrumb-click[data-type="FILE"]`), (elem)=>{
@@ -815,7 +841,6 @@ function setAndApply(element, docId, eventProtyle) {
         openRefLink(event, null, null, protyleElem);
     }
     function scrollConvert(elem, event) {
-        logPush("eventScrool", event.deltaY, elem, elem.scrollLeft);
         elem.scrollLeft = elem.scrollLeft + event.deltaY;
     }
 }
@@ -1008,11 +1033,11 @@ function setStyle() {
     .og-breadcrumb-oneline {
         margin-right: 3px;
         overflow-x: auto; /* 滚动查看，oneline套了一层div所以也得加overflow */
+        flex-shrink: 0.5; /* 块面包屑过长时避免大范围占用文档面包屑 */
     }
     
     .${CONSTANTS.CONTAINER_CLASS_NAME} .protyle-breadcrumb__text {
         margin-left: 0px;
-        max-width: 120px;
         overflow: hidden;
         text-overflow: ellipsis;
     }
@@ -1098,6 +1123,16 @@ function removeStyle() {
 }
 
 /*** Utils ***/
+
+
+function isSomePluginExist(pluginList, checkPluginName) {
+    for (const plugin of pluginList) {
+        if (checkPluginName.includes(plugin.name)) {
+            return true;
+        }
+    }
+    return false;
+}
 
 /**
  * 在html中显示文档icon
