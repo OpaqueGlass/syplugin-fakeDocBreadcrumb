@@ -803,14 +803,14 @@ function setAndApply(finalElement, docId, eventProtyle) {
     let isAdjustFinished = false;
     // 面包屑项
     const itemElements = finalElement.querySelectorAll(".protyle-breadcrumb__item ");
-    while (finalElement.scrollHeight > 30 && !isAdjustFinished && itemElements.length > 1) {
+    while (finalElement.scrollHeight > 30 && !isAdjustFinished && itemElements.length > 2) {
         [].find.call(itemElements, ((item, index) => {
             if (index > 0) {
-                if (!item.classList.contains("protyle-breadcrumb__text--ellipsis")) {
-                    item.classList.add("protyle-breadcrumb__text--ellipsis");
+                if (!item.classList.contains("og-fake-doc-breadcrumb-ellipsis")) {
+                    item.classList.add("og-fake-doc-breadcrumb-ellipsis");
                     return true;
                 }
-                if (index === itemElements.length - 1 && item.classList.contains("protyle-breadcrumb__text--ellipsis")) {
+                if (index === itemElements.length - 1 && item.classList.contains("og-fake-doc-breadcrumb-ellipsis")) {
                     isAdjustFinished = true;
                 }
             }
@@ -1109,6 +1109,10 @@ function setStyle() {
     .og-fake-doc-breadcrumb-container.protyle-breadcrumb>.protyle-breadcrumb__bar .protyle-breadcrumb__item:first-child::before {
         content: "";
         margin-right: 0px;
+    }
+
+    .og-fake-doc-breadcrumb-ellipsis {
+        max-width: 112px;
     }
     `;
     head.appendChild(style);
