@@ -4,8 +4,11 @@
 
 > Most of this document was translated by Google Translate and GPT.
 
+This is a plugin for Siyuan Note.
+
 ### Quick Start
 
+- Download from marketplace in Siyuan OR 1: Unzip the `package.zip` file in Release, 2: Move the folder to `{workplace}/data/plugins/`, 3: Rename the folder to the repo name;
 - Just turn on the plugin; (`Marketplace`--`Downloaded`--`Plugin`--`Fake Doc Breadcrumb`, click switch icon)
 
 #### Other explanation
