@@ -77,6 +77,7 @@ let g_setting_default = {
     "backTopAfterOpenDoc": false, // 打开新文档后返回文档开头（变相禁用文档浏览位置记忆）
     "notOnlyOpenDocs": false, // 除了打开的文档之外，不再判断load-protyle调用来源，一律执行面包屑插入，可能带来不期待的后果
     "preferOpenInCurrentSplit": true,
+    "icon": 1,
 };
 /**
  * Plugin类
@@ -196,6 +197,10 @@ class FakeDocBreadcrumb extends siyuan.Plugin {
             new SettingProperty("backTopAfterOpenDoc", "SWITCH", null),
             new SettingProperty("notOnlyOpenDocs", "SWITCH", null),
             new SettingProperty("preferOpenInCurrentSplit", "SWITCH", null),
+            new SettingProperty("icon", "SELECT", [
+                {value:0},
+                {value:1},
+                {value:2}]),
         ]);
 
         hello.appendChild(settingForm);
@@ -670,7 +675,7 @@ async function parseDocPath(docDetail) {
 }
 
 async function generateElement(pathObjects, docId) {
-    const divideArrow = `<span class="${CONSTANTS.ARROW_SPAN_NAME} " data-og-type="%4%" data-parent-id="%5%"><svg class="${g_setting.usePluginArrow ? CONSTANTS.ARROW_CLASS_NAME : "protyle-breadcrumb__arrow"}"
+    const divideArrow = `<span class="${CONSTANTS.ARROW_SPAN_NAME} " data-og-type="%4%" data-parent-id="%5%" data-next-id="%6%"><svg class="${g_setting.usePluginArrow ? CONSTANTS.ARROW_CLASS_NAME : "protyle-breadcrumb__arrow"}"
         >
         <use xlink:href="#iconRight"></use></svg></span>
         `;
@@ -731,7 +736,8 @@ async function generateElement(pathObjects, docId) {
         }
         htmlStr += divideArrow
             .replaceAll("%4%", onePathObject.type)
-            .replaceAll("%5%", pathObjects[i].id);
+            .replaceAll("%5%", pathObjects[i].id)
+            .replaceAll("%6%", pathObjects[i+1]?.id);
         // if (i == pathObjects.length - 1) {
         //     htmlStr += oneItem.replaceAll("%0%", pathObjects[i].id)
         //     .replaceAll("%1%", "···")
@@ -881,6 +887,7 @@ function openHideMenu(protyleElem, event) {
 
 async function openRelativeMenu(protyleElem, event) {
     let id = event.currentTarget.getAttribute("data-parent-id");
+    let nextId = event.currentTarget.getAttribute("data-next-id");
     let rect = event.currentTarget.getBoundingClientRect();
     event.stopPropagation();
     event.preventDefault();
@@ -901,11 +908,14 @@ async function openRelativeMenu(protyleElem, event) {
             currSibling.name.substring(0, g_setting.nameMaxLength) + "..."
             : currSibling.name;
         let tempMenuItemObj = {
+            iconHTML: getEmojiHtmlStr(currSibling.icon),
             label: `<span class="${CONSTANTS.MENU_ITEM_CLASS_NAME}" 
                 data-doc-id="${currSibling.id}"
+                ${nextId == currSibling.id ? `style="font-weight: bold;"` : ""}
                 title="${currSibling.name}">
                 ${trimedName}
             </span>`,
+            accelerator: nextId == currSibling.id ? "<-" : undefined,
             click: (event)=>{
                 let docId = event.querySelector("[data-doc-id]")?.getAttribute("data-doc-id")
                 openRefLink(undefined, docId, {
@@ -1040,6 +1050,20 @@ function setStyle() {
         cursor: default;
         pointer-events: none;
     }
+
+    .og-fdb-emojitext, .og-fdb-emojipic {
+        align-self: center;
+        height: 14px;
+        width: 14px;
+        line-height: 14px;
+        margin-right: 8px;
+        flex-shrink: 0;
+    }
+
+    .b3-menu__item  img.og-fdb-emojipic {
+        width: 16px;
+        height: 16px;
+    }
     
     .${CONSTANTS.CONTAINER_CLASS_NAME} .protyle-breadcrumb__text {
         margin-left: 0px;
@@ -1150,16 +1174,16 @@ function isSomePluginExist(pluginList, checkPluginName) {
  * @returns 
  */
 function getEmojiHtmlStr(iconString, hasChild) {
-    if (g_setting.icon == CONSTANTS.ICON_NONE) return g_setting.linkDivider;
+    if (g_setting.icon == CONSTANTS.ICON_NONE) return "";
     // 无emoji的处理
-    if ((iconString == undefined || iconString == null ||iconString == "") && g_setting.icon == CONSTANTS.ICON_ALL) return hasChild ? "📑" : "📄";//无icon默认值
+    if ((iconString == undefined || iconString == null ||iconString == "") && g_setting.icon == CONSTANTS.ICON_ALL) return hasChild ? `<span class="og-fdb-emojitext">📑</span>` : `<span class="og-fdb-emojitext">📄</span>`;//无icon默认值
     if ((iconString == undefined || iconString == null ||iconString == "") && g_setting.icon == CONSTANTS.ICON_CUSTOM_ONLY) return g_setting.linkDivider;
     let result = iconString;
     // emoji地址判断逻辑为出现.，但请注意之后的补全
     if (iconString.indexOf(".") != -1) {
-        result = `<img class="iconpic" style="width: ${g_setting.fontSize}px" src="/emojis/${iconString}"/>`;
+        result = `<img class="og-fdb-emojipic" src="/emojis/${iconString}"/>`;
     } else {
-        result = `<span class="emojitext">${emojiIconHandler(iconString, hasChild)}</span>`;
+        result = `<span class="og-fdb-emojitext">${emojiIconHandler(iconString, hasChild)}</span>`;
     }
     return result;
 }
