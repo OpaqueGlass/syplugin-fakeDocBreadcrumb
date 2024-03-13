@@ -670,11 +670,11 @@ async function parseDocPath(docDetail) {
 }
 
 async function generateElement(pathObjects, docId) {
-    const divideArrow = `<span class="${CONSTANTS.ARROW_SPAN_NAME} " data-type="%4%" data-parent-id="%5%"><svg class="${g_setting.usePluginArrow ? CONSTANTS.ARROW_CLASS_NAME : "protyle-breadcrumb__arrow"}"
+    const divideArrow = `<span class="${CONSTANTS.ARROW_SPAN_NAME} " data-og-type="%4%" data-parent-id="%5%"><svg class="${g_setting.usePluginArrow ? CONSTANTS.ARROW_CLASS_NAME : "protyle-breadcrumb__arrow"}"
         >
         <use xlink:href="#iconRight"></use></svg></span>
         `;
-    const oneItem = `<span class="protyle-breadcrumb__item fake-breadcrumb-click" %FLOATWINDOW% data-id="%DOCID%" data-node-id="%0%" data-type="%3%" data-node-names="%NAMES%">
+    const oneItem = `<span class="protyle-breadcrumb__item fake-breadcrumb-click" %FLOATWINDOW% data-id="%DOCID%" data-node-id="%0%" data-og-type="%3%" data-node-names="%NAMES%">
         <span class="protyle-breadcrumb__text" title="%1%">%2%</span>
     </span>
     `;
@@ -820,15 +820,15 @@ function setAndApply(finalElement, docId, eventProtyle) {
 
     debugPush("重写面包屑成功");
     // v0.2.10应该是修改为仅范围内生效了，或许不再需要remove了
-    [].forEach.call(protyleElem.querySelectorAll(`.og-fake-doc-breadcrumb-container .fake-breadcrumb-click[data-type="FILE"]`), (elem)=>{
+    [].forEach.call(protyleElem.querySelectorAll(`.og-fake-doc-breadcrumb-container .fake-breadcrumb-click[data-og-type="FILE"]`), (elem)=>{
         elem.removeEventListener("click", openRefLinkAgent);
         elem.addEventListener("click", openRefLinkAgent);
     });
-    [].forEach.call(protyleElem.querySelectorAll(`.og-fake-doc-breadcrumb-container .fake-breadcrumb-click[data-type="..."]`), (elem)=>{
+    [].forEach.call(protyleElem.querySelectorAll(`.og-fake-doc-breadcrumb-container .fake-breadcrumb-click[data-og-type="..."]`), (elem)=>{
         elem.removeEventListener("click", openHideMenu.bind(null, protyleElem));
         elem.addEventListener("click", openHideMenu.bind(null, protyleElem));
     });
-    [].forEach.call(protyleElem.querySelectorAll(`.og-fake-doc-breadcrumb-container .${CONSTANTS.ARROW_SPAN_NAME}[data-type="FILE"], .og-fake-doc-breadcrumb-container .${CONSTANTS.ARROW_SPAN_NAME}[data-type="NOTEBOOK"]`), (elem)=>{
+    [].forEach.call(protyleElem.querySelectorAll(`.og-fake-doc-breadcrumb-container .${CONSTANTS.ARROW_SPAN_NAME}[data-og-type="FILE"], .og-fake-doc-breadcrumb-container .${CONSTANTS.ARROW_SPAN_NAME}[data-og-type="NOTEBOOK"]`), (elem)=>{
         elem.removeEventListener("click", openRelativeMenu.bind(null, protyleElem));
         elem.addEventListener("click", openRelativeMenu.bind(null, protyleElem));
     });
@@ -1052,7 +1052,7 @@ function setStyle() {
         display: block !important;
     }
 
-    .og-fake-doc-breadcrumb-arrow-span[data-type=FILE], .og-fake-doc-breadcrumb-arrow-span[data-type=NOTEBOOK] {
+    .og-fake-doc-breadcrumb-arrow-span[data-og-type=FILE], .og-fake-doc-breadcrumb-arrow-span[data-og-type=NOTEBOOK] {
         cursor: pointer;
     }
     /* 上下错位调整，以及增大触发范围 */
