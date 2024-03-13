@@ -865,6 +865,7 @@ function openHideMenu(protyleElem, event) {
             name.substring(0, g_setting.nameMaxLength) + "..."
             : name;
         let tempMenuItemObj = {
+            iconHTML: "",
             label: `<span class="${CONSTANTS.MENU_ITEM_CLASS_NAME}" 
                 data-doc-id="${id}"
                 title="${name}">
