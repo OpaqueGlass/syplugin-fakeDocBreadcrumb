@@ -909,7 +909,7 @@ async function openRelativeMenu(protyleElem, event) {
             currSibling.name.substring(0, g_setting.nameMaxLength) + "..."
             : currSibling.name;
         let tempMenuItemObj = {
-            iconHTML: getEmojiHtmlStr(currSibling.icon),
+            iconHTML: getEmojiHtmlStr(currSibling.icon, currSibling.subFileCount > 0),
             label: `<span class="${CONSTANTS.MENU_ITEM_CLASS_NAME}" 
                 data-doc-id="${currSibling.id}"
                 ${nextId == currSibling.id ? `style="font-weight: bold;"` : ""}
