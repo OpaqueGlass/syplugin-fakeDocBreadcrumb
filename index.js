@@ -1035,6 +1035,11 @@ function setStyle() {
         overflow-x: auto; /* 滚动查看，oneline套了一层div所以也得加overflow */
         flex-shrink: 0.5; /* 块面包屑过长时避免大范围占用文档面包屑 */
     }
+
+    .og-fake-doc-breadcrumb-container .protyle-breadcrumb__item[data-og-type="NOTEBOOK"] {
+        cursor: default;
+        pointer-events: none;
+    }
     
     .${CONSTANTS.CONTAINER_CLASS_NAME} .protyle-breadcrumb__text {
         margin-left: 0px;
