@@ -795,7 +795,8 @@ async function openRelativeMenu(protyleElem, event) {
                     ctrlKey: event?.ctrlKey,
                     shiftKey: event?.shiftKey,
                     altKey: event?.altKey}, protyleElem);
-            }
+            },
+            current: nextId == currSibling.id
         }
         if (currSibling.icon != "" && currSibling.icon.indexOf(".") == -1) {
             tempMenuItemObj["icon"] = `icon-${currSibling.icon}`;
