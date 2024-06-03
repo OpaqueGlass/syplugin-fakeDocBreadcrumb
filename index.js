@@ -27,6 +27,7 @@ const CONSTANTS = {
     MENU_ITEM_CLASS_NAME: "og-fake-doc-breadcrumb-menu-item-container",
     SIBLING_CONTAINER_ID: "og-fake-doc-breadcrumb-sibling-doc-container",
     INDICATOR_CLASS_NAME: "og-fake-doc-breadcrumb-doc-indicator",
+    MENU_CURRENT_DOC_CLASS_NAME: "og-fdb-current-doc-in-menu",
     POP_NONE: 0,
     POP_LIMIT: 1,
     POP_ALL: 2,
@@ -57,8 +58,6 @@ let g_setting = {
     "immediatelyUpdate": null, // 实时响应更新
     "allowFloatWindow": null,
     "usePluginArrow": null,
-    "mainRetry": null, // 主函数重试次数
-    "backTopAfterOpenDoc": null,
     "preferOpenInCurrentSplit": null,
 };
 let g_setting_default = {
@@ -73,8 +72,6 @@ let g_setting_default = {
     "immediatelyUpdate": false, // 实时响应更新
     "allowFloatWindow": false, // 触发浮窗
     "usePluginArrow": true, // 使用挂件>箭头
-    "mainRetry": 5, // 主函数重试次数
-    "backTopAfterOpenDoc": false, // 打开新文档后返回文档开头（变相禁用文档浏览位置记忆）
     "notOnlyOpenDocs": false, // 除了打开的文档之外，不再判断load-protyle调用来源，一律执行面包屑插入，可能带来不期待的后果
     "preferOpenInCurrentSplit": true,
     "icon": 1,
@@ -193,8 +190,6 @@ class FakeDocBreadcrumb extends siyuan.Plugin {
             new SettingProperty("foldedEndShow", "NUMBER", [0, 8]),
             new SettingProperty("allowFloatWindow", "SWITCH", null),
             new SettingProperty("usePluginArrow", "SWITCH", null),
-            new SettingProperty("mainRetry", "NUMBER", [0, 20]),
-            new SettingProperty("backTopAfterOpenDoc", "SWITCH", null),
             new SettingProperty("notOnlyOpenDocs", "SWITCH", null),
             new SettingProperty("preferOpenInCurrentSplit", "SWITCH", null),
             new SettingProperty("icon", "SELECT", [
@@ -420,7 +415,7 @@ async function main(eventProtyle) {
         } else {
             break;
         }
-    } while (isValidStr(g_setting.mainRetry) && retryCount < parseInt(g_setting.mainRetry));
+    } while (retryCount < 1);
     if (!success && failDueToEmptyId) {
         logPush("未能获取文档id，且重试次数已达上限，停止重试");
     } else if (!success) {
@@ -782,9 +777,8 @@ async function openRelativeMenu(protyleElem, event) {
             : currSibling.name;
         let tempMenuItemObj = {
             iconHTML: getEmojiHtmlStr(currSibling.icon, currSibling.subFileCount > 0),
-            label: `<span class="${CONSTANTS.MENU_ITEM_CLASS_NAME}" 
+            label: `<span class="${CONSTANTS.MENU_ITEM_CLASS_NAME} ${nextId == currSibling.id ? CONSTANTS.MENU_CURRENT_DOC_CLASS_NAME : ""}" 
                 data-doc-id="${currSibling.id}"
-                ${nextId == currSibling.id ? `style="font-weight: bold;"` : ""}
                 title="${currSibling.name}">
                 ${trimedName}
             </span>`,
