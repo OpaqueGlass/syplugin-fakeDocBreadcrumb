@@ -1,10 +1,10 @@
 ## fakeDocBreadcrumb
 
-[请点这里阅读中文说明](README_zh_CN.md)
+[中文](README_zh_CN.md) | English
+
+> A [SiYuan Note](https://github.com/siyuan-note/siyuan) plugin that displays the current document path information above the editor.
 
 > Most of this document was translated by Google Translate and GPT.
-
-This is a plugin for Siyuan Note.
 
 ### Quick Start
 
@@ -13,8 +13,7 @@ This is a plugin for Siyuan Note.
 
 #### Other explanation
 
-- ~~Does not support displaying the floating window when the mouse hovers over~~ Support as an option from v0.2.6;
-- Limited support for Android and mobile Device;
+- No support for Android or other mobile Device;
 - You can browse the settings on the plugin settings page. Just a tip, the settings page can be scrolled up and down.
 
 ## Feedback bugs
