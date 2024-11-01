@@ -1121,6 +1121,7 @@ function openRefLink(event, paramId = "", keyParam = undefined, protyleElem = un
         altKey: event?.altKey ?? keyParam?.altKey,
         bubbles: true
     });
+    window.getSelection()?.removeAllRanges();
     虚拟链接.dispatchEvent(clickEvent);
     虚拟链接.remove();
 }
