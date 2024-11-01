@@ -6,9 +6,6 @@ const siyuan = require('siyuan');
 /**
  * 全局变量
  */
-let g_switchTabObserver; // 页签切换与新建监视器
-let g_windowObserver; // 窗口监视器
-let g_displayHideTimeout; // 显示/消失监视器
 let g_mutex = 0;
 const CONSTANTS = {
     RANDOM_DELAY: 300, // 插入挂件的延迟最大值，300（之后会乘以10）对应最大延迟3秒
@@ -34,18 +31,12 @@ const CONSTANTS = {
     MAX_NAME_LENGTH: 15,
     MULTILINE_CONFLICT_PLUGINS: ["siyuan-plugin-toolbar-plus"],
 }
-let g_observerRetryInterval;
-let g_observerStartupRefreshTimeout;
 let g_initRetryInterval;
 let g_initFailedMsgTimeout;
 let g_TIMER_LABLE_NAME_COMPARE = "文档面包屑插件";
-let g_tabbarElement = undefined;
-let g_saveTimeout;
 let g_writeStorage;
 let g_isMobile = false;
 let g_hidedBreadcrumb = false;
-let g_switchProtyleCheckCount = 0;
-let g_switchProtyleCheckTimeout = null;
 let g_setting = {
     "nameMaxLength": null,
     "docMaxNum": null,
@@ -55,7 +46,6 @@ let g_setting = {
     "foldedEndShow": null,
     "oneLineBreadcrumb": null,
     "timelyUpdate": null, // 及时响应更新
-    "immediatelyUpdate": null, // 实时响应更新
     "allowFloatWindow": null,
     "usePluginArrow": null,
     "preferOpenInCurrentSplit": null,
@@ -196,6 +186,7 @@ class FakeDocBreadcrumb extends siyuan.Plugin {
                 {value:0},
                 {value:1},
                 {value:2}]),
+            new SettingProperty("immediatelyUpdate", "SWITCH", null),
         ]);
 
         hello.appendChild(settingForm);
@@ -208,6 +199,9 @@ class FakeDocBreadcrumb extends siyuan.Plugin {
     eventBusInnerHandler() {
         this.eventBus.on("loaded-protyle-static", mainEventBusHander);
         this.eventBus.on("switch-protyle", mainEventBusHander);
+        if (g_setting.immediatelyUpdate) {
+            this.eventBus.on("ws-main", eventBusHandler);
+        }
     }
 
     offEventBusInnerHander() {
@@ -341,10 +335,19 @@ async function eventBusHandler(detail) {
     const cmdType = ["moveDoc", "rename", "removeDoc"];
     if (cmdType.indexOf(detail.detail.cmd) != -1) {
         try {
-            debugPush("等候数据库刷新");
-            await sleep(9000);
-            debugPush("由 立即更新 触发");
-            main();
+            debugPush("检查刷新中（由重命名、移动或删除触发）");
+            
+            const allEditor = siyuan.getAllEditor();
+            const id = getCurrentDocIdF();
+            if (isValidStr(id)) {
+                for (let editor of allEditor) {
+                    if (editor.protyle.block.rootID == id) {
+                        debugPush("由重命名、移动或删除触发");
+                        await main(editor.protyle);
+                        break;
+                    }
+                }
+            }
         }catch(err) {
             errorPush(err);
         }
@@ -355,7 +358,6 @@ async function main(eventProtyle) {
     if (g_isMobile) {
         debugPush("插件停止支持移动端");
         return;
-        await mobileMain();
     }
     let retryCount = 0;
     let success = false;
@@ -424,79 +426,6 @@ async function main(eventProtyle) {
         throw new Error(errorTemp);
     }
     
-}
-
-async function mobileMain() {
-    const docId = getCurrentDocIdF();
-    if (!isValidStr(docId)) {
-        infoPush("没有检测到当前文档id，已停止后续操作");
-        return;
-    }
-    const docDetail = await getCurrentDocDetail(docId);
-    if (docDetail == null) {
-        return;
-    }
-    // 添加一个btn
-    const buttonElem = document.createElement("span");
-    buttonElem.classList.add("protyle-breadcrumb__icon");
-    buttonElem.classList.add("og-fdb-mobile-btn-class")
-    buttonElem.setAttribute("id", "og-fdb-mobile-btn");
-    
-    buttonElem.innerHTML = trimPath(docDetail.hpath);
-    buttonElem.addEventListener("click", (event)=>{
-        event.preventDefault();
-        event.stopPropagation();
-        openMobileMenu(docDetail.path, docDetail.hpath);
-    });
-    document.getElementById("og-fdb-mobile-btn")?.remove();
-    const protyleBreadcrumbBar = document.querySelector(".protyle-breadcrumb");
-    protyleBreadcrumbBar.insertAdjacentElement("afterbegin", buttonElem);
-}
-
-/**
- * 从Path获取按钮内部元素HTML
- * @param {*} path 
- * @returns btn inner HTML
- */
-function trimPath(path) {
-    const seperator = "/";
-    let result;
-    let pathArray = path.split(seperator).slice(1);
-    for (let i = 0; i < pathArray.length; i++) {
-        pathArray[i] = `<span class="og-fdb-mobile-btn-path">/${pathArray[i]}</span>`;
-    }
-
-    if (pathArray.length > 4) {
-        const trimmedPathArray = ['<span class="og-fdb-mobile-btn-path-folded">...</span>'].concat(pathArray.slice(-3));
-        result = trimmedPathArray.join("");
-    } else {
-        result = pathArray.join("");
-    }
-    return result;
-}
-
-async function openMobileMenu(idPath, hPath) {
-    // 解析，构造PathMenu
-    const tempMenu = new siyuan.Menu("testMenuOGFDB");
-    const idPathItem = idPath.split("/").slice(1);
-    const hPathItem = hPath.split("/").slice(1);
-    
-    for (let i = 0; i < idPathItem.length; i++) {
-        const currentId = idPathItem[i].includes(".sy") ? idPathItem[i].slice(0, -3) : idPathItem[i];
-        const currentName = hPathItem[i].includes(".sy") ? hPathItem[i].slice(0, -3) : hPathItem[i];
-        let tempMenuItemObj = {
-            
-            icon: "",
-            label: currentName,
-            click: openRefLink.bind(this, undefined, currentId, {
-                ctrlKey: false,
-                shiftKey: false,
-                altKey: false})
-        }
-        tempMenu.addItem(tempMenuItemObj);
-    }
-    // tempMenu.open({x: 122, y: 122});
-    tempMenu.fullscreen("all");
 }
 
 function sleep(time){
@@ -826,54 +755,12 @@ async function getHPathByID(docId) {
     return parseBody(request(url, data));
 }
 
-/**
- * 获取文档相关信息：父文档、同级文档、子文档
- */
-async function getDocumentRelations(docId, sqlResult) {
-    // let sqlResult = await sqlAPI(`SELECT * FROM blocks WHERE id = "${docId}"`);
-     // 获取父文档
-    let parentDoc = await getParentDocument(docId, sqlResult);
-    
-    // 获取子文档
-    let childDocs = await getChildDocuments(docId, sqlResult);
-
-    let noParentFlag = false;
-    if (parentDoc.length == 0) {
-        noParentFlag = true;
-    }
-    // 获取同级文档
-    let siblingDocs = await getSiblingDocuments(docId, parentDoc, sqlResult, noParentFlag);
-
-    // 超长部分裁剪
-    if (childDocs.length > g_setting.docMaxNum && g_setting.docMaxNum != 0) {
-        childDocs = childDocs.slice(0, g_setting.docMaxNum);
-    }
-    if (siblingDocs.length > g_setting.docMaxNum && g_setting.docMaxNum != 0) {
-        siblingDocs = siblingDocs.slice(0, g_setting.docMaxNum);
-    }
-
-    // 返回结果
-    return [ parentDoc, childDocs, siblingDocs ];
-}
-
-async function getParentDocument(docId, sqlResult) {
-    let splitText = sqlResult[0].path.split("/");
-    if (splitText.length <= 2) return [];
-    let parentSqlResult = await sqlAPI(`SELECT * FROM blocks WHERE id = "${splitText[splitText.length - 2]}"`);
-    return parentSqlResult;
-}
-
 async function getChildDocuments(docId, sqlResult) {
     let childDocs = await listDocsByPath({path: sqlResult[0].path, notebook: sqlResult[0].box});
     if (childDocs.files.length > g_setting.docMaxNum && g_setting.docMaxNum != 0) {
         childDocs.files = childDocs.files.slice(0, g_setting.docMaxNum);
     }
     return childDocs.files;
-}
-
-async function getSiblingDocuments(docId, parentSqlResult, sqlResult, noParentFlag) {
-    let siblingDocs = await listDocsByPath({path: noParentFlag ? "/" : parentSqlResult[0].path, notebook: sqlResult[0].box});
-    return siblingDocs.files;
 }
 
 function setMouseKeyboardListener() {
@@ -1056,8 +943,19 @@ function isSomePluginExist(pluginList, checkPluginName) {
 function getEmojiHtmlStr(iconString, hasChild) {
     if (g_setting.icon == CONSTANTS.ICON_NONE) return ``;
     // 无emoji的处理
-    if ((iconString == undefined || iconString == null ||iconString == "") && g_setting.icon == CONSTANTS.ICON_ALL) return hasChild ? `<span class="og-fdb-menu-emojitext">📑</span>` : `<span class="og-fdb-menu-emojitext">📄</span>`;//无icon默认值
-    if ((iconString == undefined || iconString == null ||iconString == "") && g_setting.icon == CONSTANTS.ICON_CUSTOM_ONLY) return `<span class="og-fdb-menu-emojitext"></span>`;
+    if ((iconString == undefined || iconString == null ||iconString == "") && g_setting.icon == CONSTANTS.ICON_ALL) {
+        if (window.siyuan.storage["local-images"]) {
+            if (hasChild) {
+                return getEmojiHtmlStr(window.siyuan.storage["local-images"].folder, hasChild);
+            } else {
+                return getEmojiHtmlStr(window.siyuan.storage["local-images"].file, hasChild);
+            }
+        }
+        return hasChild ? `<span class="og-fdb-menu-emojitext">📑</span>` : `<span class="og-fdb-menu-emojitext">📄</span>`;
+    }
+    if ((iconString == undefined || iconString == null ||iconString == "") && g_setting.icon == CONSTANTS.ICON_CUSTOM_ONLY) {
+        return `<span class="og-fdb-menu-emojitext"></span>`;
+    }
     let result = iconString;
     // emoji地址判断逻辑为出现.，但请注意之后的补全
     if (iconString.indexOf(".") != -1) {
@@ -1081,6 +979,36 @@ let emojiIconHandler = function (iconString, hasChild = false) {
     }
 }
 
+function getCurrentDocIdF() {
+    let thisDocId = null;
+    thisDocId = window.top.document.querySelector(".layout__wnd--active .protyle.fn__flex-1:not(.fn__none) .protyle-background")?.getAttribute("data-node-id");
+    debugPush("thisDocId by first id", thisDocId);
+    let temp = null;
+    if (!thisDocId && isMobile()) {
+        // UNSTABLE: 面包屑样式变动将导致此方案错误！
+        try {
+            temp = window.top.document.querySelector(".protyle-breadcrumb .protyle-breadcrumb__item .popover__block[data-id]")?.getAttribute("data-id");
+            let iconArray = window.top.document.querySelectorAll(".protyle-breadcrumb .protyle-breadcrumb__item .popover__block[data-id]");
+            for (let i = 0; i < iconArray.length; i++) {
+                let iconOne = iconArray[i];
+                if (iconOne.children.length > 0 
+                    && iconOne.children[0].getAttribute("xlink:href") == "#iconFile"){
+                    temp = iconOne.getAttribute("data-id");
+                    break;
+                }
+            }
+            thisDocId = temp;
+        }catch(e){
+            console.error(e);
+            temp = null;
+        }
+    }
+    if (!thisDocId) {
+        thisDocId = window.top.document.querySelector(".protyle.fn__flex-1:not(.fn__none) .protyle-background")?.getAttribute("data-node-id");
+        debugPush("thisDocId by background must match,  id", thisDocId);
+    }
+    return thisDocId;
+}
 async function request(url, data) {
     let resData = null;
     await fetch(url, {
@@ -1134,36 +1062,6 @@ async function sqlAPI(stmt) {
     };
     let url = `/api/query/sql`;
     return parseBody(request(url, data));
-}
-
-function getCurrentDocIdF() {
-    let thisDocId;
-    thisDocId = window.top.document.querySelector(".layout__wnd--active .protyle.fn__flex-1:not(.fn__none) .protyle-background")?.getAttribute("data-node-id");
-    if (!thisDocId && g_isMobile) {
-        // UNSTABLE: 面包屑样式变动将导致此方案错误！
-        try {
-            let temp;
-            temp = window.top.document.querySelector(".protyle-breadcrumb .protyle-breadcrumb__item .popover__block[data-id]")?.getAttribute("data-id");
-            let iconArray = window.top.document.querySelectorAll(".protyle-breadcrumb .protyle-breadcrumb__item .popover__block[data-id]");
-            for (let i = 0; i < iconArray.length; i++) {
-                let iconOne = iconArray[i];
-                if (iconOne.children.length > 0 
-                    && iconOne.children[0].getAttribute("xlink:href") == "#iconFile"){
-                    temp = iconOne.getAttribute("data-id");
-                    break;
-                }
-            }
-            thisDocId = temp;
-        }catch(e){
-            errorPush(e);
-            temp = null;
-        }
-    }
-    if (!thisDocId) {
-        thisDocId = window.top.document.querySelector(".protyle.fn__flex-1:not(.fn__none) .protyle-background")?.getAttribute("data-node-id");
-        debugPush("thisDocId by background must match,  id", thisDocId);
-    }
-    return thisDocId;
 }
 
 /**
@@ -1243,9 +1141,6 @@ let zh_CN = {
     "setting_panel_title": "文档面包屑插件设置",
 }
 
-let en_US = {
-    
-}
 let language = zh_CN;
 
 /**
@@ -1363,14 +1258,6 @@ function generateSettingPanelHTML(settingObjectArray) {
     }
     // console.log(resultHTML);
     return resultHTML;
-}
-
-/**
- * 由配置文件读取配置
- */
-function loadCacheSettings() {
-    // 检索当前页面所有设置项元素
-
 }
 
 /**
