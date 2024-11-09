@@ -958,7 +958,9 @@ function getEmojiHtmlStr(iconString, hasChild) {
     }
     let result = iconString;
     // emoji地址判断逻辑为出现.，但请注意之后的补全
-    if (iconString.indexOf(".") != -1) {
+    if (iconString.startsWith("api/icon/getDynamicIcon")) {
+        result = `<img class="og-fdb-menu-emojipic" src="/${iconString}"/>`;
+    } else if (iconString.indexOf(".") != -1) {
         result = `<img class="og-fdb-menu-emojipic" src="/emojis/${iconString}"/>`;
     } else {
         result = `<span class="og-fdb-menu-emojitext">${emojiIconHandler(iconString, hasChild)}</span>`;
