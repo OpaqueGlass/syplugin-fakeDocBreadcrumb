@@ -258,6 +258,7 @@ function logPush(str, ...args) {
 function errorPush(str, ... args) {
     if (commonPushCheck() >= 1) {
         console.error(`${g_FULLNAME}[E] ${new Date().toLocaleString()} ${str}`, ...args);
+        console.trace(args[0] ?? undefined);
     }
 }
 
@@ -338,13 +339,12 @@ async function eventBusHandler(detail) {
             debugPush("检查刷新中（由重命名、移动或删除触发）");
             
             const allEditor = siyuan.getAllEditor();
-            const id = getCurrentDocIdF();
-            if (isValidStr(id)) {
+            const ids = getAllShowingDocId();
+            if (ids != null && ids.length > 0) {
                 for (let editor of allEditor) {
-                    if (editor.protyle.block.rootID == id) {
+                    if (ids.includes(editor.protyle.block.rootID)) {
                         debugPush("由重命名、移动或删除触发");
                         await main(editor.protyle);
-                        break;
                     }
                 }
             }
@@ -363,7 +363,7 @@ async function main(eventProtyle) {
     let success = false;
     let failDueToEmptyId = false;
     let errorTemp = null;
-    do {
+    // do {
         retryCount ++ ;
         if (g_mutex > 0) {
             debugPush("发现已有main正在运行，已停止");
@@ -378,7 +378,7 @@ async function main(eventProtyle) {
                 failDueToEmptyId = true;
                 debugPush(`第${retryCount}次获取文档id失败，休息一会儿后重新尝试`);
                 await sleep(200);
-                continue;
+                // continue;
             }
             failDueToEmptyId = false;
             const docDetail = await getCurrentDocDetail(docId, eventProtyle);
@@ -403,28 +403,29 @@ async function main(eventProtyle) {
             success = true;
         }catch(err){
             warnPush(err);
+            errorPush(err);
             errorTemp = err;
         }finally{
             g_mutex = 0;
         }
         if (errorTemp) {
             debugPush("由于出现错误，终止重试", errorTemp);
-            break;
+            // break;
         }
         if (!success) {
             debugPush(`重试中${retryCount}，休息一会儿后重新尝试`);
             await sleep(200);
         } else {
-            break;
+            // break;
         }
-    } while (retryCount < 1);
-    if (!success && failDueToEmptyId) {
-        logPush("未能获取文档id，且重试次数已达上限，停止重试");
-    } else if (!success) {
-        logPush("重试次数已达上限，停止重试");
-        // 抛出是为了防止后续错误
-        throw new Error(errorTemp);
-    }
+    // } while (retryCount < 1);
+    // if (!success && failDueToEmptyId) {
+    //     logPush("未能获取文档id，且重试次数已达上限，停止重试");
+    // } else if (!success) {
+    //     logPush("重试次数已达上限，停止重试");
+    //     // 抛出是为了防止后续错误
+    //     throw new Error(errorTemp);
+    // }
     
 }
 
@@ -434,7 +435,9 @@ function sleep(time){
 
 async function parseDocPath(docDetail) {
     let pathArray = docDetail.path.substring(0, docDetail.path.length - 3).split("/");
-    let hpathArray = docDetail.hpath.split("/");
+    // 处理并发意外
+    let hpath = docDetail.hpath ?? await getHPathByID(docDetail.docId);
+    let hpathArray = hpath.split("/");
     let resultArray = [];
     let notebooks = getNotebooks();
     let box;
@@ -511,8 +514,8 @@ async function generateElement(pathObjects, docId, protyle) {
                 .replaceAll("%NAMES%", JSON.stringify(hidedNames).replaceAll(`"`, `'`))
                 .replaceAll("%FLOATWINDOW%", "");
             htmlStr += divideArrow.replaceAll("%4%", "HIDE")
-                .replaceAll("%7%", pathObjects[j].path)
-                .replaceAll("%8%", pathObjects[j].box);
+                .replaceAll("%7%", pathObjects[i].path)
+                .replaceAll("%8%", pathObjects[i].box);
             i = foldEndAt;
             // 避免为负数，但好像没啥用
             if (i < 0) i = 0;
@@ -742,7 +745,8 @@ async function getCurrentDocDetail(docId, protyle) {
     let result = {
         path: protyle.path,
         hpath: await getHPathByID(docId),
-        box: protyle.notebookId
+        box: protyle.notebookId,
+        docId: protyle.block.rootID
     }
     return result;
 }
@@ -978,6 +982,18 @@ let emojiIconHandler = function (iconString, hasChild = false) {
     } catch (err) {
         errorPush("emoji处理时发生错误", iconString, err);
         return hasChild ? "📑" : "📄";
+    }
+}
+
+function getAllShowingDocId() {
+    if (isMobile()) {
+        return [getCurrentDocIdF()];
+    } else {
+        const elemList = window.document.querySelectorAll("[data-type=wnd] .protyle.fn__flex-1:not(.fn__none) .protyle-background");
+        const result = [].map.call(elemList, function(elem) {
+            return elem.getAttribute("data-node-id");
+        });
+        return result
     }
 }
 
