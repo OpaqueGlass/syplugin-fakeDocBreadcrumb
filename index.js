@@ -6,7 +6,7 @@ const siyuan = require('siyuan');
 /**
  * 全局变量
  */
-let g_mutex = 0;
+let g_mutex = {};
 const CONSTANTS = {
     RANDOM_DELAY: 300, // 插入挂件的延迟最大值，300（之后会乘以10）对应最大延迟3秒
     OBSERVER_RANDOM_DELAY: 500, // 插入链接、引用块和自定义时，在OBSERVER_RANDOM_DELAY_ADD的基础上增加延时，单位毫秒
@@ -365,12 +365,16 @@ async function main(eventProtyle) {
     let errorTemp = null;
     // do {
         retryCount ++ ;
-        if (g_mutex > 0) {
+        if (g_mutex[eventProtyle?.block?.rootID] != null && g_mutex[eventProtyle?.block?.rootID] > 0) {
             debugPush("发现已有main正在运行，已停止");
             return;
         }
-        try {   
-            g_mutex++;
+        try {
+            if (g_mutex[eventProtyle?.block?.rootID]) {
+                g_mutex[eventProtyle?.block?.rootID]++;
+            } else {
+                g_mutex[eventProtyle?.block?.rootID] = 1;
+            }
             // 获取当前文档id
             // const docId = getCurrentDocIdF();
             const docId = eventProtyle.block.rootID;
@@ -406,7 +410,7 @@ async function main(eventProtyle) {
             errorPush(err);
             errorTemp = err;
         }finally{
-            g_mutex = 0;
+            g_mutex[eventProtyle?.block?.rootID]--;
         }
         if (errorTemp) {
             debugPush("由于出现错误，终止重试", errorTemp);
@@ -513,9 +517,11 @@ async function generateElement(pathObjects, docId, protyle) {
                 .replaceAll("%3%", "...")
                 .replaceAll("%NAMES%", JSON.stringify(hidedNames).replaceAll(`"`, `'`))
                 .replaceAll("%FLOATWINDOW%", "");
-            htmlStr += divideArrow.replaceAll("%4%", "HIDE")
-                .replaceAll("%7%", pathObjects[i].path)
-                .replaceAll("%8%", pathObjects[i].box);
+            htmlStr += divideArrow.replaceAll("%4%", "FILE") // HIDE时不理会
+                .replaceAll("%5%", pathObjects[foldEndAt].id)
+                .replaceAll("%6%", pathObjects[foldEndAt+1]?.id)
+                .replaceAll("%7%", pathObjects[foldEndAt].path)
+                .replaceAll("%8%", pathObjects[foldEndAt].box);
             i = foldEndAt;
             // 避免为负数，但好像没啥用
             if (i < 0) i = 0;
