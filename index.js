@@ -49,6 +49,7 @@ let g_setting = {
     "allowFloatWindow": null,
     "usePluginArrow": null,
     "preferOpenInCurrentSplit": null,
+    "icon": null,
 };
 let g_setting_default = {
     "nameMaxLength": 15,
@@ -457,9 +458,24 @@ async function parseDocPath(docDetail) {
         "icon": box.icon,
         "box": box.id,
         "path": "/",
-        "type": "NOTEBOOK"
+        "type": "NOTEBOOK",
+        "subFileCount": -1,
     }
     resultArray.push(temp);
+    // 获取图标
+    let icons = [""]
+    let subFileCounts = [-1]
+    if (g_setting.icon != CONSTANTS.ICON_NONE) {
+        let promiseList = [];
+        for (let i = 1; i < pathArray.length; i++) {
+            promiseList.push(getDocInfo(pathArray[i]));
+        }
+        let iconResult = await Promise.all(promiseList);
+        for (let i of iconResult) {
+            icons.push(i.icon);
+            subFileCounts.push(i.subFileCount);
+        }
+    }
     let temp_path = "";
     for (let i = 1; i < pathArray.length; i++) {
         let temp = {
@@ -469,6 +485,11 @@ async function parseDocPath(docDetail) {
             "path": `${temp_path}/${pathArray[i]}.sy`,
             "box": box.id,
             "type": "FILE",
+            "subFileCount": -1
+        }
+        if (g_setting.icon != CONSTANTS.ICON_NONE) {
+            temp["icon"] = icons[i];
+            temp["subFileCount"] = subFileCounts[i]
         }
         temp_path += "/" + pathArray[i];
         resultArray.push(temp);
@@ -482,6 +503,7 @@ async function generateElement(pathObjects, docId, protyle) {
         <use xlink:href="#iconRight"></use></svg></span>
         `;
     const oneItem = `<span class="protyle-breadcrumb__item fake-breadcrumb-click" %FLOATWINDOW% data-id="%DOCID%" data-node-id="%0%" data-og-type="%3%" data-node-names="%NAMES%">
+        %4%
         <span class="protyle-breadcrumb__text" title="%1%">%2%</span>
     </span>
     `;
@@ -515,6 +537,7 @@ async function generateElement(pathObjects, docId, protyle) {
                 .replaceAll("%1%", "···")
                 .replaceAll("%2%", `···`)
                 .replaceAll("%3%", "...")
+                .replaceAll("%4%", "")
                 .replaceAll("%NAMES%", JSON.stringify(hidedNames).replaceAll(`"`, `'`))
                 .replaceAll("%FLOATWINDOW%", "");
             htmlStr += divideArrow.replaceAll("%4%", "FILE") // HIDE时不理会
@@ -534,6 +557,7 @@ async function generateElement(pathObjects, docId, protyle) {
                 .replaceAll("%1%", onePathObject.name)
                 .replaceAll("%2%", onePathObject.name)
                 .replaceAll("%3%", onePathObject.type)
+                .replaceAll("%4%", getEmojiHtmlStr(onePathObject.icon, onePathObject.subFileCount != 0, "og-fdb-bread-emojitext", "og-fdb-bread-emojipic", true))
                 .replaceAll("%FLOATWINDOW%", g_setting.allowFloatWindow && onePathObject.type == "FILE" ? `data-type="block-ref" data-subtype="d" data-id="${onePathObject.id}"` : "");
         }
         // 最后一个文档、且不含子文档跳出判断
@@ -837,6 +861,15 @@ function setStyle() {
         flex-shrink: 0;
     }
 
+    .og-fdb-bread-emojitext, .og-fdb-bread-emojipic {
+        align-self: center;
+        height: 14px;
+        width: 14px;
+        line-height: 14px;
+        margin-right: 8px;
+        flex-shrink: 0;
+    }
+
     .b3-menu__item  img.og-fdb-menu-emojipic {
         width: 16px;
         height: 16px;
@@ -959,9 +992,9 @@ function getEmojiHtmlStr(iconString, hasChild, textClassName="og-fdb-menu-emojit
     if ((iconString == undefined || iconString == null ||iconString == "") && g_setting.icon == CONSTANTS.ICON_ALL) {
         if (window.siyuan.storage["local-images"]) {
             if (hasChild) {
-                return getEmojiHtmlStr(window.siyuan.storage["local-images"].folder, hasChild);
+                return getEmojiHtmlStr(window.siyuan.storage["local-images"].folder, hasChild, textClassName, picClassName, wrapText);
             } else {
-                return getEmojiHtmlStr(window.siyuan.storage["local-images"].file, hasChild);
+                return getEmojiHtmlStr(window.siyuan.storage["local-images"].file, hasChild, textClassName, picClassName, wrapText);
             }
         }
         if (hasChild) {

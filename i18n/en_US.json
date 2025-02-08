@@ -26,7 +26,7 @@
     "setting_preferOpenInCurrentSplit_name": "🧪Open the document in the split-screen area where the breadcrumb is located",
     "setting_preferOpenInCurrentSplit_desp": "When disabled, the plug-in opens documents in the current split-screen area with focus; note that in the current implementation, even if enabled, documents already open in other split-screens cannot be opened in the current split-screen area",
     "setting_icon_name": "Sub menu document Icon",
-    "setting_icon_desp": "Controls whether the document icon is displayed (in the subdocument menu).",
+    "setting_icon_desp": "Controls whether the document icon is displayed (in the subdocument menu and the breadcrum item).",
     "setting_icon_option_0": "Hide all",
     "setting_icon_option_1": "Custom only",
     "setting_icon_option_2": "Show all",
