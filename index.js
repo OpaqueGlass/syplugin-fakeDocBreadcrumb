@@ -557,7 +557,7 @@ async function generateElement(pathObjects, docId, protyle) {
                 .replaceAll("%1%", onePathObject.name)
                 .replaceAll("%2%", onePathObject.name)
                 .replaceAll("%3%", onePathObject.type)
-                .replaceAll("%4%", getEmojiHtmlStr(onePathObject.icon, onePathObject.subFileCount != 0, "og-fdb-bread-emojitext", "og-fdb-bread-emojipic", true))
+                .replaceAll("%4%", getEmojiHtmlStr(onePathObject.icon, onePathObject.subFileCount != 0, "og-fdb-bread-emojitext", "og-fdb-bread-emojipic", true, false))
                 .replaceAll("%FLOATWINDOW%", g_setting.allowFloatWindow && onePathObject.type == "FILE" ? `data-type="block-ref" data-subtype="d" data-id="${onePathObject.id}"` : "");
         }
         // 最后一个文档、且不含子文档跳出判断
@@ -984,9 +984,10 @@ function isSomePluginExist(pluginList, checkPluginName) {
  * @param {str} textClassName 文本的span class名称
  * @param {str} picClassName 图片img class名称
  * @param {boolean} wrapText 将文本使用text包裹
+ * @param {boolean} wrapBlank 即使按照设置并没有图标，也使用span包裹图标
  * @returns 
  */
-function getEmojiHtmlStr(iconString, hasChild, textClassName="og-fdb-menu-emojitext", picClassName="og-fdb-menu-emojipic", wrapText=true) {
+function getEmojiHtmlStr(iconString, hasChild, textClassName="og-fdb-menu-emojitext", picClassName="og-fdb-menu-emojipic", wrapText=true, wrapBlank=true) {
     if (g_setting.icon == CONSTANTS.ICON_NONE) return ``;
     // 无emoji的处理
     if ((iconString == undefined || iconString == null ||iconString == "") && g_setting.icon == CONSTANTS.ICON_ALL) {
@@ -1012,7 +1013,7 @@ function getEmojiHtmlStr(iconString, hasChild, textClassName="og-fdb-menu-emojit
         }
     }
     if ((iconString == undefined || iconString == null ||iconString == "") && g_setting.icon == CONSTANTS.ICON_CUSTOM_ONLY) {
-        if (wrapText) {
+        if (wrapBlank) {
             return `<span class="${textClassName}"></span>`;
         } else {
             return "";
