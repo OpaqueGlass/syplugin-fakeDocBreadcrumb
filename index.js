@@ -948,9 +948,12 @@ function isSomePluginExist(pluginList, checkPluginName) {
  * 在html中显示文档icon
  * @param {*} iconString files[x].icon
  * @param {*} hasChild 
+ * @param {str} textClassName 文本的span class名称
+ * @param {str} picClassName 图片img class名称
+ * @param {boolean} wrapText 将文本使用text包裹
  * @returns 
  */
-function getEmojiHtmlStr(iconString, hasChild) {
+function getEmojiHtmlStr(iconString, hasChild, textClassName="og-fdb-menu-emojitext", picClassName="og-fdb-menu-emojipic", wrapText=true) {
     if (g_setting.icon == CONSTANTS.ICON_NONE) return ``;
     // 无emoji的处理
     if ((iconString == undefined || iconString == null ||iconString == "") && g_setting.icon == CONSTANTS.ICON_ALL) {
@@ -961,19 +964,39 @@ function getEmojiHtmlStr(iconString, hasChild) {
                 return getEmojiHtmlStr(window.siyuan.storage["local-images"].file, hasChild);
             }
         }
-        return hasChild ? `<span class="og-fdb-menu-emojitext">📑</span>` : `<span class="og-fdb-menu-emojitext">📄</span>`;
+        if (hasChild) {
+            if (wrapText) {
+                return `<span class="${textClassName}">📑</span>`;        
+            } else {
+                return "📑";
+            }
+        } else {
+            if (wrapText) {
+                return `<span class="${textClassName}">📄</span>`;
+            } else {
+                return "📄";
+            }
+        }
     }
     if ((iconString == undefined || iconString == null ||iconString == "") && g_setting.icon == CONSTANTS.ICON_CUSTOM_ONLY) {
-        return `<span class="og-fdb-menu-emojitext"></span>`;
+        if (wrapText) {
+            return `<span class="${textClassName}"></span>`;
+        } else {
+            return "";
+        }
     }
     let result = iconString;
     // emoji地址判断逻辑为出现.，但请注意之后的补全
     if (iconString.startsWith("api/icon/getDynamicIcon")) {
-        result = `<img class="og-fdb-menu-emojipic" src="/${iconString}"/>`;
+        result = `<img class="${picClassName}" src="/${iconString}"/>`;
     } else if (iconString.indexOf(".") != -1) {
-        result = `<img class="og-fdb-menu-emojipic" src="/emojis/${iconString}"/>`;
+        result = `<img class="${picClassName}" src="/emojis/${iconString}"/>`;
     } else {
-        result = `<span class="og-fdb-menu-emojitext">${emojiIconHandler(iconString, hasChild)}</span>`;
+        if (wrapText) {
+            result = `<span class="${textClassName}">${emojiIconHandler(iconString, hasChild)}</span>`;
+        } else {
+            result = emojiIconHandler(iconString, hasChild);
+        }
     }
     return result;
 }
