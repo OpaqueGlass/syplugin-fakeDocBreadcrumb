@@ -4,7 +4,7 @@
 
 > 在编辑器上方显示当前文档路径信息的[思源笔记](https://github.com/siyuan-note/siyuan)插件。
 
-> 当前版本：v1.1.1 **改进**：为面包屑加入文档图标；
+> 当前版本：v1.1.2 **改进**：已有在显示的同级文档菜单时，点击`>`直接打开菜单（感谢[Hug-Zephyr](https://github.com/Hug-Zephyr/HZ-syplugin-fakeDocBreadcrumb)！）；
 >
 > 详见[更新日志](CHANGELOG.md)
 
@@ -36,4 +36,5 @@
 | 开发者/项目                                                  | 描述                                                         | 说明         |
 | ------------------------------------------------------------ | ------------------------------------------------------------ | ------------ |
 | [leolee9086](https://github.com/leolee9086) / [cc-template](https://github.com/leolee9086/cc-template) | 使用挂件渲染模板；[木兰宽松许可证， 第2版](https://github.com/leolee9086/cc-template/blob/main/LICENSE) | 点击打开文档 |
-| [zuoez02](https://github.com/zuoez02)/[siyuan-plugin-system](https://github.com/zuoez02/siyuan-plugin-system) | 插件系统                                                     |              |
+| [zuoez02](https://github.com/zuoez02)/[siyuan-plugin-system](https://github.com/zuoez02/siyuan-plugin-system) | 插件系统（社区版）                                                     |              |
+| [Hug-Zephyr](https://github.com/Hug-Zephyr)/[HZ-syplugin-fakeDocBreadcrumb](https://github.com/Hug-Zephyr/HZ-syplugin-fakeDocBreadcrumb) |        fork-repo，进行了亿些优化                                               | 右键菜单调整，菜单超长调整             |

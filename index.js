@@ -35,6 +35,7 @@ let g_initRetryInterval;
 let g_initFailedMsgTimeout;
 let g_TIMER_LABLE_NAME_COMPARE = "文档面包屑插件";
 let g_writeStorage;
+let g_relativeMenu;
 let g_isMobile = false;
 let g_hidedBreadcrumb = false;
 let g_setting = {
@@ -364,17 +365,18 @@ async function main(eventProtyle) {
     let success = false;
     let failDueToEmptyId = false;
     let errorTemp = null;
+    let uuid = eventProtyle?.element?.getAttribute("data-id") ?? eventProtyle?.block?.rootID;
     // do {
         retryCount ++ ;
-        if (g_mutex[eventProtyle?.block?.rootID] != null && g_mutex[eventProtyle?.block?.rootID] > 0) {
+        if (g_mutex[uuid] != null && g_mutex[uuid] > 0) {
             debugPush("发现已有main正在运行，已停止");
             return;
         }
         try {
-            if (g_mutex[eventProtyle?.block?.rootID]) {
-                g_mutex[eventProtyle?.block?.rootID]++;
+            if (g_mutex[uuid]) {
+                g_mutex[uuid]++;
             } else {
-                g_mutex[eventProtyle?.block?.rootID] = 1;
+                g_mutex[uuid] = 1;
             }
             // 获取当前文档id
             // const docId = getCurrentDocIdF();
@@ -411,7 +413,7 @@ async function main(eventProtyle) {
             errorPush(err);
             errorTemp = err;
         }finally{
-            g_mutex[eventProtyle?.block?.rootID]--;
+            g_mutex[uuid]--;
         }
         if (errorTemp) {
             debugPush("由于出现错误，终止重试", errorTemp);
@@ -502,7 +504,7 @@ async function generateElement(pathObjects, docId, protyle) {
         >
         <use xlink:href="#iconRight"></use></svg></span>
         `;
-    const oneItem = `<span class="protyle-breadcrumb__item fake-breadcrumb-click" %FLOATWINDOW% data-id="%DOCID%" data-node-id="%0%" data-og-type="%3%" data-node-names="%NAMES%">
+    const oneItem = `<span class="protyle-breadcrumb__item fake-breadcrumb-click" %FLOATWINDOW% data-node-id="%0%" data-og-type="%3%" data-node-names="%NAMES%"  data-next-id="%6%" data-og-path="%7%" data-og-box="%8%">
         %4%
         <span class="protyle-breadcrumb__text" title="%1%">%2%</span>
     </span>
@@ -558,7 +560,11 @@ async function generateElement(pathObjects, docId, protyle) {
                 .replaceAll("%2%", onePathObject.name)
                 .replaceAll("%3%", onePathObject.type)
                 .replaceAll("%4%", getEmojiHtmlStr(onePathObject.icon, onePathObject.subFileCount != 0, "og-fdb-bread-emojitext", "og-fdb-bread-emojipic", true, false))
-                .replaceAll("%FLOATWINDOW%", g_setting.allowFloatWindow && onePathObject.type == "FILE" ? `data-type="block-ref" data-subtype="d" data-id="${onePathObject.id}"` : "");
+                .replaceAll("%FLOATWINDOW%", g_setting.allowFloatWindow && onePathObject.type == "FILE" ? `data-type="block-ref" data-subtype="d" data-id="${onePathObject.id}"` : "")
+                .replaceAll("%5%", pathObjects[i].id)
+                .replaceAll("%6%", pathObjects[i+1]?.id)
+                .replaceAll("%7%", pathObjects[i].path)
+                .replaceAll("%8%", pathObjects[i].box);
         }
         // 最后一个文档、且不含子文档跳出判断
         if (i == pathObjects.length - 1 && !await isChildDocExist(onePathObject.id)) {
@@ -655,26 +661,33 @@ function setAndApply(finalElement, docId, eventProtyle) {
     finalElement.firstChild.classList.add("protyle-breadcrumb__bar--nowrap");
 
     debugPush("重写面包屑成功");
-    // v0.2.10应该是修改为仅范围内生效了，或许不再需要remove了
+    // v0.2.10应该是修改为仅范围内生效了，不再需要remove了
     [].forEach.call(protyleElem.querySelectorAll(`.og-fake-doc-breadcrumb-container .fake-breadcrumb-click[data-og-type="FILE"]`), (elem)=>{
-        elem.removeEventListener("click", openRefLinkAgent);
-        elem.addEventListener("click", openRefLinkAgent);
+        elem.addEventListener("mousedown", openRefLinkAgent.bind(null, "FILE"));
+    });
+    [].forEach.call(protyleElem.querySelectorAll(`.og-fake-doc-breadcrumb-container .fake-breadcrumb-click[data-og-type="NOTEBOOK"]`), (elem)=>{
+        elem.addEventListener("mousedown", openRefLinkAgent.bind(null, "NOTEBOOK"));
     });
     [].forEach.call(protyleElem.querySelectorAll(`.og-fake-doc-breadcrumb-container .fake-breadcrumb-click[data-og-type="..."]`), (elem)=>{
-        elem.removeEventListener("click", openHideMenu.bind(null, protyleElem));
         elem.addEventListener("click", openHideMenu.bind(null, protyleElem));
     });
     [].forEach.call(protyleElem.querySelectorAll(`.og-fake-doc-breadcrumb-container .${CONSTANTS.ARROW_SPAN_NAME}[data-og-type="FILE"], .og-fake-doc-breadcrumb-container .${CONSTANTS.ARROW_SPAN_NAME}[data-og-type="NOTEBOOK"]`), (elem)=>{
-        elem.removeEventListener("click", openRelativeMenu.bind(null, protyleElem));
         elem.addEventListener("click", openRelativeMenu.bind(null, protyleElem));
     });
     [].forEach.call(protyleElem.querySelectorAll(`.og-fake-doc-breadcrumb-container .protyle-breadcrumb__bar`), (elem)=>{
-        elem.removeEventListener("mousewheel", scrollConvert.bind(null, elem), true);
         elem.addEventListener("mousewheel", scrollConvert.bind(null, elem), true);
     });
     // setDisplayHider();
-    function openRefLinkAgent(event) {
-        openRefLink(event, null, null, protyleElem);
+    function openRefLinkAgent(type, event) {
+        if (event.button == 2) {
+            openRelativeMenu(protyleElem, event);
+        } else if (type == "FILE") {
+            openRefLink(event, null, null, protyleElem);
+        }
+        if (g_relativeMenu) {
+            g_relativeMenu.close();
+            g_relativeMenu = null;
+        }
     }
     function scrollConvert(elem, event) {
         elem.scrollLeft = elem.scrollLeft + event.deltaY;
@@ -717,7 +730,11 @@ function openHideMenu(protyleElem, event) {
 
 
 async function openRelativeMenu(protyleElem, event) {
-    let id = event.currentTarget.getAttribute("data-parent-id");
+    if (g_relativeMenu) {
+        g_relativeMenu.close();
+        g_relativeMenu = null;
+    }
+    let id = event.currentTarget.getAttribute("data-parent-id") ?? event.currentTarget.getAttribute("data-node-id");
     let nextId = event.currentTarget.getAttribute("data-next-id");
     let thisPath = event.currentTarget.getAttribute("data-og-path");
     let box = event.currentTarget.getAttribute("data-og-box");
@@ -761,7 +778,7 @@ async function openRelativeMenu(protyleElem, event) {
     }
 
     tempMenu.open({x: rect.left, y: rect.bottom, isLeft:false});
-    
+    g_relativeMenu = tempMenu;
 }
 
 
@@ -849,7 +866,7 @@ function setStyle() {
 
     .og-fake-doc-breadcrumb-container .protyle-breadcrumb__item[data-og-type="NOTEBOOK"] {
         cursor: default;
-        pointer-events: none;
+        /*pointer-events: none;*/
     }
 
     .og-fdb-menu-emojitext, .og-fdb-menu-emojipic {
