@@ -30,6 +30,8 @@
     "setting_icon_option_0": "Hide all",
     "setting_icon_option_1": "Custom only",
     "setting_icon_option_2": "Show all",
+    "setting_menuKeepCurrentVisible_name": "Subdocument menu: scroll to current path when menu is expanded",
+    "setting_menuKeepCurrentVisible_desp": "When enabled, the subdocument menu automatically scrolls to ensure that the path of the current document can be displayed; except when the maximum number of documents is set to be small and is not listed;",
     "setting_RESERVE_HINT_name": "There are many settings, scroll up or down to view more.",
     "setting_RESERVE_HINT_desp": "The latest settings are usually located at the bottom.",
 

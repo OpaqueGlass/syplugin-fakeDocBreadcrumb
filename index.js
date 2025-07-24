@@ -51,6 +51,7 @@ let g_setting = {
     "usePluginArrow": null,
     "preferOpenInCurrentSplit": null,
     "icon": null,
+    "menuKeepCurrentVisible": null,
 };
 let g_setting_default = {
     "nameMaxLength": 15,
@@ -67,6 +68,7 @@ let g_setting_default = {
     "notOnlyOpenDocs": false, // 除了打开的文档之外，不再判断load-protyle调用来源，一律执行面包屑插入，可能带来不期待的后果
     "preferOpenInCurrentSplit": true,
     "icon": 1,
+    "menuKeepCurrentVisible": true,
 };
 /**
  * Plugin类
@@ -730,10 +732,6 @@ function openHideMenu(protyleElem, event) {
 
 
 async function openRelativeMenu(protyleElem, event) {
-    if (g_relativeMenu) {
-        g_relativeMenu.close();
-        g_relativeMenu = null;
-    }
     let id = event.currentTarget.getAttribute("data-parent-id") ?? event.currentTarget.getAttribute("data-node-id");
     let nextId = event.currentTarget.getAttribute("data-next-id");
     let thisPath = event.currentTarget.getAttribute("data-og-path");
@@ -741,13 +739,26 @@ async function openRelativeMenu(protyleElem, event) {
     let rect = event.currentTarget.getBoundingClientRect();
     event.stopPropagation();
     event.preventDefault();
+    if (g_relativeMenu) {
+        let tempId = g_relativeMenu["id"];
+        // menu.isOpen没啥用，菜单显示时isOpen也不是true
+        // debugPush("id", tempId, id, g_relativeMenu["menu"]?.isOpen, document.querySelector("#commonMenu[data-name='og-fdb-relative-menu']"));
+        // 存在相同的菜单，仅关闭，不重新打开
+        if (tempId === id && document.querySelector("#commonMenu[data-name='og-fdb-relative-menu']")) {
+            g_relativeMenu["menu"]?.close();
+            g_relativeMenu = null;
+            return;
+        }
+        g_relativeMenu["menu"]?.close();
+        g_relativeMenu = null;
+    }
     let sqlResult = [{
         path: thisPath,
         box: box
     }];
     let siblings = await getChildDocuments(id, sqlResult);
     if (siblings.length <= 0) return;
-    const tempMenu = new siyuan.Menu("newMenu");
+    const tempMenu = new siyuan.Menu("og-fdb-relative-menu");
     for (let i = 0; i < siblings.length; i++) {
         let currSibling = siblings[i];
         currSibling.name = currSibling.name.substring(0, currSibling.name.length - 3);
@@ -776,9 +787,23 @@ async function openRelativeMenu(protyleElem, event) {
         }
         tempMenu.addItem(tempMenuItemObj);
     }
-
-    tempMenu.open({x: rect.left, y: rect.bottom, isLeft:false});
-    g_relativeMenu = tempMenu;
+    // 列表过长时，调整位置；列表一个item的高为30px；之后是为了判断>下面的内容还是否够用
+    if (siblings.length * 30 > (window.innerHeight - rect.bottom) * 0.7) {
+        tempMenu.open({x: rect.right, y: rect.top, isLeft:false});
+    } else {
+        tempMenu.open({x: rect.left, y: rect.bottom, isLeft:false});
+    }
+    setTimeout(()=>{
+        if (g_setting.menuKeepCurrentVisible) {
+            tempMenu.element.querySelector('.b3-menu__item--selected')?.scrollIntoView({
+                behavior: 'smooth',        // 平滑滚动（可选）
+                block: 'nearest',          // 'start' | 'center' | 'end' | 'nearest'
+                inline: 'nearest'
+            });
+        }
+        
+    }, 3);
+    g_relativeMenu = {"menu": tempMenu, "id": id};
 }
 
 
@@ -858,6 +883,9 @@ function setStyle() {
     const style = document.createElement('style');
     style.setAttribute("id", CONSTANTS.STYLE_ID);
     style.innerHTML = `
+    /*#commonMenu[data-name='og-fdb-relative-menu'] .b3-menu__items {
+        max-height: 60vh;
+    }*/
     .og-breadcrumb-oneline {
         margin-right: 3px;
         overflow-x: auto; /* 滚动查看，oneline套了一层div所以也得加overflow */

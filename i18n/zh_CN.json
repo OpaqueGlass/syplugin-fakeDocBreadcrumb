@@ -30,6 +30,8 @@
     "setting_icon_option_0": "不显示",
     "setting_icon_option_1": "仅自定义",
     "setting_icon_option_2": "显示全部",
+    "setting_menuKeepCurrentVisible_name": "子文档菜单：展开菜单时滚动到当前路径",
+    "setting_menuKeepCurrentVisible_desp": "当开启时，下层文档菜单会自动滚动，以保证当前所在文档的路径可以显示；文档最大数量设置较小导致未列出时除外；",
     "setting_RESERVE_HINT_name": "设置比较多，上下滑动/滚动查看更多",
     "setting_RESERVE_HINT_desp": "这个设置页咱就不改了，挺麻烦的:) 最新的设置一般在下面",
 
