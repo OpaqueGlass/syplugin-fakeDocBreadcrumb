@@ -734,6 +734,12 @@ function openHideMenu(protyleElem, event) {
 
     tempMenu.open({x: rect.left, y: rect.bottom,isLeft:false});
 }
+/**
+ * 打开相关文档菜单
+ * @param {HTMLElement} protyleElem 
+ * @param {Event} event 
+ * @returns 
+ */
 async function openRelativeMenu(protyleElem, event) {
     const maxDepth = g_setting["menuExtendSubDocDepth"];
     let id = event.currentTarget.getAttribute("data-parent-id") ?? event.currentTarget.getAttribute("data-node-id");
@@ -741,6 +747,9 @@ async function openRelativeMenu(protyleElem, event) {
     let thisPath = event.currentTarget.getAttribute("data-og-path");
     let box = event.currentTarget.getAttribute("data-og-box");
     let rect = event.currentTarget.getBoundingClientRect();
+    if (!event.currentTarget.classList.contains("og-fake-doc-breadcrumb-arrow-span") && event.currentTarget.nextElementSibling) {
+        rect = event.currentTarget.nextElementSibling.getBoundingClientRect();
+    }
     event.stopPropagation();
     event.preventDefault();
     if (g_relativeMenu) {
