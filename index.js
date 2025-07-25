@@ -52,6 +52,7 @@ let g_setting = {
     "preferOpenInCurrentSplit": null,
     "icon": null,
     "menuKeepCurrentVisible": null,
+    "menuExtendSubDocDepth": null,
 };
 let g_setting_default = {
     "nameMaxLength": 15,
@@ -69,6 +70,7 @@ let g_setting_default = {
     "preferOpenInCurrentSplit": true,
     "icon": 1,
     "menuKeepCurrentVisible": true,
+    "menuExtendSubDocDepth": 2,
 };
 /**
  * Plugin类
@@ -191,6 +193,7 @@ class FakeDocBreadcrumb extends siyuan.Plugin {
                 {value:1},
                 {value:2}]),
             new SettingProperty("immediatelyUpdate", "SWITCH", null),
+            new SettingProperty("menuExtendSubDocDepth", "NUMBER", [1, 7]),
         ]);
 
         hello.appendChild(settingForm);
@@ -721,7 +724,9 @@ function openHideMenu(protyleElem, event) {
                 openRefLink(undefined, docId, {
                     ctrlKey: event?.ctrlKey,
                     shiftKey: event?.shiftKey,
-                    altKey: event?.altKey}, protyleElem);
+                    altKey: event?.altKey,
+                    metaKey: event?.metaKey,
+                }, protyleElem);
             }
         }
         tempMenu.addItem(tempMenuItemObj);
@@ -729,9 +734,8 @@ function openHideMenu(protyleElem, event) {
 
     tempMenu.open({x: rect.left, y: rect.bottom,isLeft:false});
 }
-
-
 async function openRelativeMenu(protyleElem, event) {
+    const maxDepth = g_setting["menuExtendSubDocDepth"];
     let id = event.currentTarget.getAttribute("data-parent-id") ?? event.currentTarget.getAttribute("data-node-id");
     let nextId = event.currentTarget.getAttribute("data-next-id");
     let thisPath = event.currentTarget.getAttribute("data-og-path");
@@ -741,9 +745,6 @@ async function openRelativeMenu(protyleElem, event) {
     event.preventDefault();
     if (g_relativeMenu) {
         let tempId = g_relativeMenu["id"];
-        // menu.isOpen没啥用，菜单显示时isOpen也不是true
-        // debugPush("id", tempId, id, g_relativeMenu["menu"]?.isOpen, document.querySelector("#commonMenu[data-name='og-fdb-relative-menu']"));
-        // 存在相同的菜单，仅关闭，不重新打开
         if (tempId === id && document.querySelector("#commonMenu[data-name='og-fdb-relative-menu']")) {
             g_relativeMenu["menu"]?.close();
             g_relativeMenu = null;
@@ -752,58 +753,232 @@ async function openRelativeMenu(protyleElem, event) {
         g_relativeMenu["menu"]?.close();
         g_relativeMenu = null;
     }
+    
     let sqlResult = [{
         path: thisPath,
         box: box
     }];
     let siblings = await getChildDocuments(id, sqlResult);
     if (siblings.length <= 0) return;
+    
     const tempMenu = new siyuan.Menu("og-fdb-relative-menu");
+    
+    // 本层级内容
     for (let i = 0; i < siblings.length; i++) {
         let currSibling = siblings[i];
-        currSibling.name = currSibling.name.substring(0, currSibling.name.length - 3);
-        let trimedName = currSibling.name.length > g_setting.nameMaxLength ? 
-            currSibling.name.substring(0, g_setting.nameMaxLength) + "..."
-            : currSibling.name;
+        let docName = currSibling.name.endsWith(".sy") ? currSibling.name.substring(0, currSibling.name.length - 3) : currSibling.name;
+        let trimedName = docName.length > g_setting.nameMaxLength ? 
+            docName.substring(0, g_setting.nameMaxLength) + "..."
+            : docName;
         let tempMenuItemObj = {
             iconHTML: getEmojiHtmlStr(currSibling.icon, currSibling.subFileCount > 0),
             label: `<span class="${CONSTANTS.MENU_ITEM_CLASS_NAME} ${nextId == currSibling.id ? CONSTANTS.MENU_CURRENT_DOC_CLASS_NAME : ""}" 
                 data-doc-id="${currSibling.id}"
-                title="${currSibling.name}">
+                title="${docName}">
                 ${trimedName}
             </span>`,
             accelerator: nextId == currSibling.id ? "<-" : undefined,
-            click: (event)=>{
-                let docId = event.querySelector("[data-doc-id]")?.getAttribute("data-doc-id")
-                openRefLink(undefined, docId, {
-                    ctrlKey: event?.ctrlKey,
-                    shiftKey: event?.shiftKey,
-                    altKey: event?.altKey}, protyleElem);
-            },
             current: nextId == currSibling.id
-        }
-        if (currSibling.icon != "" && currSibling.icon.indexOf(".") == -1) {
+        };
+        
+        if (currSibling.icon && currSibling.icon !== "" && currSibling.icon.indexOf(".") === -1) {
             tempMenuItemObj["icon"] = `icon-${currSibling.icon}`;
         }
+        
+        // 对于带有子层级的文档，另外处理，主要是一些参数
+        if (currSibling.subFileCount > 0 && maxDepth > 1) {
+            tempMenuItemObj.type = "submenu";
+            tempMenuItemObj.submenu = [
+                {
+                    label: language["loading"],
+                    disabled: true
+                }
+            ];
+            
+            tempMenuItemObj.label = `<span class="${CONSTANTS.MENU_ITEM_CLASS_NAME} ${nextId == currSibling.id ? CONSTANTS.MENU_CURRENT_DOC_CLASS_NAME : ""}" 
+                data-doc-id="${currSibling.id}"
+                data-has-children="true"
+                data-path="${currSibling.path || ''}"
+                data-box="${box}"
+                data-loaded="false"
+                title="${docName}">
+                ${trimedName}
+            </span>`;
+        }
+        tempMenuItemObj.click = (event) => {
+            let docId = event.querySelector("[data-doc-id]")?.getAttribute("data-doc-id");
+            openRefLink(undefined, docId, {
+                ctrlKey: event?.ctrlKey,
+                shiftKey: event?.shiftKey,
+                altKey: event?.altKey,
+                metaKey: event?.metaKey,
+            }, protyleElem);
+            g_relativeMenu["menu"]?.close();
+            g_relativeMenu = null;
+        };
         tempMenu.addItem(tempMenuItemObj);
     }
-    // 列表过长时，调整位置；列表一个item的高为30px；之后是为了判断>下面的内容还是否够用
+    // 菜单展示位置调整，仅针对首层级
     if (siblings.length * 30 > (window.innerHeight - rect.bottom) * 0.7) {
-        tempMenu.open({x: rect.right, y: rect.top, isLeft:false});
+        tempMenu.open({x: rect.right, y: rect.top, isLeft: false});
     } else {
-        tempMenu.open({x: rect.left, y: rect.bottom, isLeft:false});
+        tempMenu.open({x: rect.left, y: rect.bottom, isLeft: false});
     }
-    setTimeout(()=>{
+    setTimeout(() => {
         if (g_setting.menuKeepCurrentVisible) {
             tempMenu.element.querySelector('.b3-menu__item--selected')?.scrollIntoView({
-                behavior: 'smooth',        // 平滑滚动（可选）
-                block: 'nearest',          // 'start' | 'center' | 'end' | 'nearest'
+                behavior: 'smooth',
+                block: 'nearest',
                 inline: 'nearest'
             });
         }
         
+        // 懒加载
+        if (g_setting.menuExtendSubDocDepth > 1) {
+            addLazyLoadEventListeners(tempMenu.element, maxDepth, protyleElem);
+        }
     }, 3);
+    
     g_relativeMenu = {"menu": tempMenu, "id": id};
+}
+
+/**
+ * 对带有子菜单的添加懒加载
+ * @param {HTMLElement} menuElement 菜单元素
+ * @param {number} maxDepth 最大深度
+ * @param {HTMLElement} protyleElem protyle Elem
+ * @param {number} currentDepth 层级深度
+ */
+function addLazyLoadEventListeners(menuElement, maxDepth, protyleElem, currentDepth = 1) {
+    // 仅针对未加载的进行处理
+    const menuItems = menuElement.querySelectorAll('.b3-menu__item [data-has-children="true"][data-loaded="false"]');
+    
+    menuItems.forEach(item => {
+        const menuItemElement = item.closest('.b3-menu__item');
+        if (!menuItemElement) return;
+        
+        // 悬停加载
+        menuItemElement.addEventListener('mouseover', async function handleMouseOver(e) {
+            const docId = item.getAttribute('data-doc-id');
+            const path = item.getAttribute('data-path');
+            const box = item.getAttribute('data-box');
+            const isLoaded = item.getAttribute('data-loaded') === 'true';
+            
+            if (isLoaded || currentDepth >= maxDepth) return;
+            
+            // 避免多次处理
+            item.setAttribute('data-loaded', 'true');
+            
+            const submenuContainer = menuItemElement.querySelector('.b3-menu__submenu .b3-menu__items');
+            if (!submenuContainer) return;
+            
+            submenuContainer.innerHTML = '';
+            
+            // 加载子文档
+            const sqlResult = [{ path, box }];
+            const childDocuments = await getChildDocuments(docId, sqlResult);
+            
+            if (!childDocuments || childDocuments.length === 0) {
+                submenuContainer.innerHTML = `<button class="b3-menu__item" disabled><span class="b3-menu__label">${language["no_doc"]}</span></button>`;
+                return;
+            }
+            
+            // 子文档菜单
+            for (const childDoc of childDocuments) {
+                const docName = childDoc.name.endsWith(".sy") ? 
+                    childDoc.name.substring(0, childDoc.name.length - 3) : 
+                    childDoc.name;
+                    
+                const trimedName = docName.length > g_setting.nameMaxLength ? 
+                    docName.substring(0, g_setting.nameMaxLength) + "..." : 
+                    docName;
+                const hasChildren = childDoc.subFileCount > 0 && (currentDepth + 1) < maxDepth;
+                
+                // Menu Item
+                const menuItemEl = document.createElement('button');
+                menuItemEl.className = 'b3-menu__item';
+                if (hasChildren) {
+                    menuItemEl.classList.add('b3-menu__item--custom');
+                }
+                
+                // Emoji
+                const emojiEl = document.createElement('span');
+                emojiEl.className = 'og-fdb-menu-emojitext';
+                emojiEl.innerHTML = getEmojiHtmlStr(childDoc.icon, childDoc.subFileCount > 0);
+                menuItemEl.appendChild(emojiEl);
+                
+                // label
+                const labelEl = document.createElement('span');
+                labelEl.className = 'b3-menu__label';
+                
+                // title
+                const docTitleEl = document.createElement('span');
+                docTitleEl.className = `${CONSTANTS.MENU_ITEM_CLASS_NAME}`;
+                docTitleEl.setAttribute('data-doc-id', childDoc.id);
+                docTitleEl.setAttribute('title', docName);
+                
+                if (hasChildren) {
+                    docTitleEl.setAttribute('data-has-children', 'true');
+                    docTitleEl.setAttribute('data-path', childDoc.path || '');
+                    docTitleEl.setAttribute('data-box', box);
+                    docTitleEl.setAttribute('data-loaded', 'false');
+                }
+                
+                docTitleEl.textContent = trimedName;
+                labelEl.appendChild(docTitleEl);
+                menuItemEl.appendChild(labelEl);
+                
+                // 子文档的子文档
+                if (hasChildren) {
+                    // > icon
+                    // svg里的use，使用带namespace的才能够正确创建一个有效的use箭头
+                    const svgNS = 'http://www.w3.org/2000/svg';
+
+                    const arrowIcon = document.createElementNS(svgNS, 'svg');
+                    arrowIcon.setAttribute('class', 'b3-menu__icon b3-menu__icon--small');
+
+                    const use = document.createElementNS(svgNS, 'use');
+                    use.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', '#iconRight');
+
+                    arrowIcon.appendChild(use);
+                    menuItemEl.appendChild(arrowIcon);
+                    
+                    // 子文档容器
+                    const submenuDiv = document.createElement('div');
+                    submenuDiv.className = 'b3-menu__submenu';
+                    
+                    const submenuItems = document.createElement('div');
+                    submenuItems.className = 'b3-menu__items';
+                    
+                    // 加载中……
+                    const loadingItem = document.createElement('button');
+                    loadingItem.className = 'b3-menu__item';
+                    loadingItem.disabled = true;
+                    loadingItem.innerHTML = '<span class="b3-menu__label">Loading...</span>';
+                    submenuItems.appendChild(loadingItem);
+                    
+                    submenuDiv.appendChild(submenuItems);
+                    menuItemEl.appendChild(submenuDiv);
+                }
+                menuItemEl.addEventListener('click', (event) => {
+                    const docId = docTitleEl.getAttribute('data-doc-id');
+                    openRefLink(undefined, docId, {
+                        ctrlKey: event?.ctrlKey,
+                        shiftKey: event?.shiftKey,
+                        altKey: event?.altKey,
+                        metaKey: event?.metaKey,
+                    }, protyleElem);
+                    // 手动绑定的不能触发菜单关闭，这里自行处理一下
+                    g_relativeMenu["menu"]?.close();
+                    g_relativeMenu = null;
+                });
+                submenuContainer.appendChild(menuItemEl);
+            }
+            
+            // 对子Menu再度绑定
+            addLazyLoadEventListeners(submenuContainer, maxDepth, protyleElem, currentDepth + 1);
+        });
+    });
 }
 
 
@@ -829,6 +1004,20 @@ async function getHPathByID(docId) {
         id: docId
     }
     return parseBody(request(url, data));
+}
+
+async function listDocTree(notebook, path) {
+    const url = "/api/filetree/listDocTree";
+    let postBody = {
+        notebook,
+        path
+    }
+    let response = await postRequest(postBody, url);
+    if (response.code == 0) {
+        return response.data.tree;
+    } else {
+        throw new Error("listDocTree Failed: " + response.msg);
+    }
 }
 
 async function getChildDocuments(docId, sqlResult) {
@@ -1245,6 +1434,7 @@ function openRefLink(event, paramId = "", keyParam = undefined, protyleElem = un
         ctrlKey: event?.ctrlKey ?? keyParam?.ctrlKey,
         shiftKey: event?.shiftKey ?? keyParam?.shiftKey,
         altKey: event?.altKey ?? keyParam?.altKey,
+        metaKey: event?.metaKey ?? keyParam?.metaKey,
         bubbles: true
     });
     window.getSelection()?.removeAllRanges();

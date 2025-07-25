@@ -34,10 +34,15 @@
     "setting_menuKeepCurrentVisible_desp": "When enabled, the subdocument menu automatically scrolls to ensure that the path of the current document can be displayed; except when the maximum number of documents is set to be small and is not listed;",
     "setting_RESERVE_HINT_name": "There are many settings, scroll up or down to view more.",
     "setting_RESERVE_HINT_desp": "The latest settings are usually located at the bottom.",
+    "setting_menuExtendSubDocDepth_name": "🧪Sub-doc Menu Extend Depth",
+    "setting_menuExtendSubDocDepth_desp": "Set the number of sub-menu levels to display in the breadcrumb menu.",
 
     "conflict_plugin_oneline_breadcrumb": "Detected conflicting plugins (occupying the line below breadcrumbs). The fakeDocBreadcrumb plugin suggest enable the \"🧪 Display the document breadcrumb on the same line as the block breadcrumb\" feature.",
 
     "setting_experimental": "(Experimental Feature. UNSTABLE. May be removed at any time) ",
+
+    "loading": "Loading...",
+    "no_doc": "No Document",
 
     "error_initFailed": "HierarchyNavigation Plugin initialization failed, please report this issue to developer at your convenience",
     "setting_panel_title": "Fake doc breadcrumb Settings",

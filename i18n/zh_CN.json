@@ -25,6 +25,8 @@
     "setting_notOnlyOpenDocs_desp": "除了正常打开文档之外，其他由<code>loaded-protyle</code>事件调起的编辑器也尝试插入文档面包屑；可能与其他插件、面板内编辑器产生冲突；⚠除非您了解发生了什么，否则请勿使用",
     "setting_preferOpenInCurrentSplit_name": "🧪在面包屑所在分屏区打开文档",
     "setting_preferOpenInCurrentSplit_desp": "禁用后，插件将在当前具有焦点的分屏区打开文档；请注意：在目前的实现中，已经存在于在其他分屏区的文档，不会被重复打开",
+    "setting_menuExtendSubDocDepth_name": "🧪下层文档菜单扩展层级",
+    "setting_menuExtendSubDocDepth_desp": "最小值1，最大值7",
     "setting_icon_name": "文档图标",
     "setting_icon_desp": "控制子文档菜单、面包屑路径中文档图标显示与否",
     "setting_icon_option_0": "不显示",
@@ -38,6 +40,9 @@
     "conflict_plugin_oneline_breadcrumb": "检测到冲突插件（占用面包屑下方一行），建议启用文档面包屑插件的“🧪与块面包屑在同一行显示”功能",
 
     "setting_experimental": "（实验性功能，不稳定，可能随时被移除）",
+
+    "loading": "加载中...",
+    "no_doc": "没有文档",
 
     "error_initFailed": "文档面包屑插件初始化失败，如果可以，请向开发者反馈此问题",
     "setting_panel_title": "文档面包屑插件设置",
