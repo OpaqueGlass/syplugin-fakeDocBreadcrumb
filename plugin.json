@@ -2,7 +2,7 @@
   "name": "syplugin-fakeDocBreadcrumb",
   "author": "OpaqueGlass",
   "url": "https://github.com/OpaqueGlass/syplugin-fakeDocBreadcrumb",
-  "version": "1.1.1",
+  "version": "1.2.0",
   "displayName": {
     "default": "fakeDocBreadcrumb",
     "zh_CN": "(伪)文档面包屑",
@@ -10,8 +10,8 @@
   },
   "description": {
     "default": "Add a doc-breadcrumb",
-    "zh_CN": "再添加一个文档面包屑",
-    "en_US": "Add a doc-breadcrumb"
+    "zh_CN": "再添加一个文档面包屑：在编辑区域顶部添加可跳转的文档路径信息导航条",
+    "en_US": "Add a document breadcrumb. Add document path information that can be jumped to at the top of the editing area."
   },
   "readme": {
     "default": "README.md",

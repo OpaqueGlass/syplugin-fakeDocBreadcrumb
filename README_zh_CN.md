@@ -4,8 +4,10 @@
 
 > 在编辑器上方显示当前文档路径信息的[思源笔记](https://github.com/siyuan-note/siyuan)插件。
 
-> 当前版本：v1.1.2 **改进**：已有在显示的同级文档菜单时，点击`>`直接打开菜单（感谢[Hug-Zephyr](https://github.com/Hug-Zephyr/HZ-syplugin-fakeDocBreadcrumb)！）；
->
+> 当前版本：v1.2.0 
+> - **改进**：（下层文档菜单调整）已有在显示的同级文档菜单时，点击`>`直接打开菜单；菜单较长时的显示调整；（感谢[Hug-Zephyr](https://github.com/Hug-Zephyr/HZ-syplugin-fakeDocBreadcrumb)！）；
+> - **新增**：（下层文档菜单调整、设置项）支持最多7层级的子菜单，以展示深层内容；
+> 
 > 详见[更新日志](CHANGELOG.md)
 
 > 插件最初在2023年4月发布，感谢陪伴！插件现已进入维护阶段，停止功能新增和较大的改进变动；如遇到bug缺陷请反馈。
