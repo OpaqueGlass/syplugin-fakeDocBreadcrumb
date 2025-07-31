@@ -27,6 +27,8 @@
     "setting_preferOpenInCurrentSplit_desp": "禁用后，插件将在当前具有焦点的分屏区打开文档；请注意：在目前的实现中，已经存在于在其他分屏区的文档，不会被重复打开",
     "setting_menuExtendSubDocDepth_name": "🧪下层文档菜单扩展层级",
     "setting_menuExtendSubDocDepth_desp": "最小值1，最大值7",
+    "setting_swapClickFunction_name": "🧪交换左右键点击功能",
+    "setting_swapClickFunction_desp": "启用后，左键点击将展开下层文档，右键点击将打开文档",
     "setting_icon_name": "文档图标",
     "setting_icon_desp": "控制子文档菜单、面包屑路径中文档图标显示与否",
     "setting_icon_option_0": "不显示",

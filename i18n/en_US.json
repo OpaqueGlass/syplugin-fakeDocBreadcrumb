@@ -36,6 +36,8 @@
     "setting_RESERVE_HINT_desp": "The latest settings are usually located at the bottom.",
     "setting_menuExtendSubDocDepth_name": "🧪Sub-doc Menu Extend Depth",
     "setting_menuExtendSubDocDepth_desp": "Set the number of sub-menu levels to display in the breadcrumb menu.",
+    "setting_swapClickFunction_name": "🧪Swap left and right key click functions for document names",
+    "setting_swapClickFunction_desp": "When enabled, left-click will expand the underlying document menu, right-click will open the document",
 
     "conflict_plugin_oneline_breadcrumb": "Detected conflicting plugins (occupying the line below breadcrumbs). The fakeDocBreadcrumb plugin suggest enable the \"🧪 Display the document breadcrumb on the same line as the block breadcrumb\" feature.",
 

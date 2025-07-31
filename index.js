@@ -53,6 +53,7 @@ let g_setting = {
     "icon": null,
     "menuKeepCurrentVisible": null,
     "menuExtendSubDocDepth": null,
+    "swapClickFunction": null,
 };
 let g_setting_default = {
     "nameMaxLength": 15,
@@ -71,6 +72,7 @@ let g_setting_default = {
     "icon": 1,
     "menuKeepCurrentVisible": true,
     "menuExtendSubDocDepth": 2,
+    "swapClickFunction": false,
 };
 /**
  * Plugin类
@@ -194,6 +196,7 @@ class FakeDocBreadcrumb extends siyuan.Plugin {
                 {value:2}]),
             new SettingProperty("immediatelyUpdate", "SWITCH", null),
             new SettingProperty("menuExtendSubDocDepth", "NUMBER", [1, 7]),
+            new SettingProperty("swapClickFunction", "SWITCH", null),
         ]);
 
         hello.appendChild(settingForm);
@@ -668,10 +671,10 @@ function setAndApply(finalElement, docId, eventProtyle) {
     debugPush("重写面包屑成功");
     // v0.2.10应该是修改为仅范围内生效了，不再需要remove了
     [].forEach.call(protyleElem.querySelectorAll(`.og-fake-doc-breadcrumb-container .fake-breadcrumb-click[data-og-type="FILE"]`), (elem)=>{
-        elem.addEventListener("mousedown", openRefLinkAgent.bind(null, "FILE"));
+        elem.addEventListener("mouseup", openRefLinkAgent.bind(null, "FILE", protyleElem));
     });
     [].forEach.call(protyleElem.querySelectorAll(`.og-fake-doc-breadcrumb-container .fake-breadcrumb-click[data-og-type="NOTEBOOK"]`), (elem)=>{
-        elem.addEventListener("mousedown", openRefLinkAgent.bind(null, "NOTEBOOK"));
+        elem.addEventListener("mouseup", openRefLinkAgent.bind(null, "NOTEBOOK", protyleElem));
     });
     [].forEach.call(protyleElem.querySelectorAll(`.og-fake-doc-breadcrumb-container .fake-breadcrumb-click[data-og-type="..."]`), (elem)=>{
         elem.addEventListener("click", openHideMenu.bind(null, protyleElem));
@@ -683,19 +686,27 @@ function setAndApply(finalElement, docId, eventProtyle) {
         elem.addEventListener("mousewheel", scrollConvert.bind(null, elem), true);
     });
     // setDisplayHider();
-    function openRefLinkAgent(type, event) {
+    
+    function scrollConvert(elem, event) {
+        elem.scrollLeft = elem.scrollLeft + event.deltaY;
+    }
+}
+
+function openRefLinkAgent(type, protyleElem, event) {
+    event.preventDefault();
+    event.stopPropagation();
+    if (g_setting.swapClickFunction) {
+        if (event.button == 2 && type === "FILE") {
+            openRefLink(event, null, null, protyleElem);
+        } else if (event.button != 2) {
+            openRelativeMenu(protyleElem, event);
+        }
+    } else {
         if (event.button == 2) {
             openRelativeMenu(protyleElem, event);
         } else if (type == "FILE") {
             openRefLink(event, null, null, protyleElem);
         }
-        if (g_relativeMenu) {
-            g_relativeMenu.close();
-            g_relativeMenu = null;
-        }
-    }
-    function scrollConvert(elem, event) {
-        elem.scrollLeft = elem.scrollLeft + event.deltaY;
     }
 }
 
