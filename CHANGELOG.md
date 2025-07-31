@@ -1,5 +1,9 @@
 ## 更新日志
 
+### v1.2.1 (2025年7月31日)
+
+- 改进：支持交换左右键点击功能；
+
 ### v1.2.0 (2025年7月25日)
 
 感谢[Hug-Zephyr](https://github.com/Hug-Zephyr/HZ-syplugin-fakeDocBreadcrumb)
