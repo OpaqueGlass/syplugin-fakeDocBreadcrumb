@@ -54,6 +54,7 @@ let g_setting = {
     "menuKeepCurrentVisible": null,
     "menuExtendSubDocDepth": null,
     "swapClickFunction": null,
+    "showRoot": null,
 };
 let g_setting_default = {
     "nameMaxLength": 15,
@@ -73,6 +74,7 @@ let g_setting_default = {
     "menuKeepCurrentVisible": true,
     "menuExtendSubDocDepth": 2,
     "swapClickFunction": false,
+    "showRoot": false,
 };
 /**
  * Plugin类
@@ -182,6 +184,7 @@ class FakeDocBreadcrumb extends siyuan.Plugin {
             new SettingProperty("docMaxNum", "NUMBER", [0, 1024]),
             new SettingProperty("nameMaxLength", "NUMBER", [0, 1024]),
             new SettingProperty("showNotebook", "SWITCH", null),
+            new SettingProperty("showRoot", "SWITCH", null),
             new SettingProperty("typeHide", "SWITCH", null),
             new SettingProperty("oneLineBreadcrumb", "SWITCH", null),
             new SettingProperty("foldedFrontShow", "NUMBER", [0, 8]),
@@ -524,6 +527,21 @@ async function generateElement(pathObjects, docId, protyle) {
         g_setting.foldedFrontShow + 1;
     // 折叠隐藏结束于
     const foldEndAt = pathObjects.length - g_setting.foldedEndShow - 1;
+    if (g_setting.showRoot) {
+        htmlStr += oneItem.replaceAll("%0%", "")
+                .replaceAll("%1%", language["workspace"])
+                .replaceAll("%2%", language["root"])
+                .replaceAll("%3%", 'ROOT')
+                .replaceAll("%4%", ``)
+                // 很怪，这个层级需要设置一下，不然冒泡导致直接关闭打开的菜单
+                .replaceAll("%FLOATWINDOW%", "data-menu='true'")
+                .replaceAll("%5%", "")
+                .replaceAll("%6%", pathObjects[0].box)
+                .replaceAll("%7%", "")
+                .replaceAll("%8%", "");
+        htmlStr += divideArrow
+            .replaceAll("%4%", "ROOT");
+    }
     for (let i = 0; i < pathObjects.length; i++) {
         countDebug++;
         if (countDebug > 200) {
@@ -670,16 +688,23 @@ function setAndApply(finalElement, docId, eventProtyle) {
 
     debugPush("重写面包屑成功");
     // v0.2.10应该是修改为仅范围内生效了，不再需要remove了
+    // 点击 文件类型
     [].forEach.call(protyleElem.querySelectorAll(`.og-fake-doc-breadcrumb-container .fake-breadcrumb-click[data-og-type="FILE"]`), (elem)=>{
         elem.addEventListener("mouseup", openRefLinkAgent.bind(null, "FILE", protyleElem));
     });
+    // 点击 笔记本类型
     [].forEach.call(protyleElem.querySelectorAll(`.og-fake-doc-breadcrumb-container .fake-breadcrumb-click[data-og-type="NOTEBOOK"]`), (elem)=>{
         elem.addEventListener("mouseup", openRefLinkAgent.bind(null, "NOTEBOOK", protyleElem));
     });
+    [].forEach.call(protyleElem.querySelectorAll(`.og-fake-doc-breadcrumb-container .fake-breadcrumb-click[data-og-type="ROOT"]`), (elem)=>{
+        elem.addEventListener("mouseup", openRefLinkAgent.bind(null, "ROOT", protyleElem));
+    });
+    // 点击折叠区域
     [].forEach.call(protyleElem.querySelectorAll(`.og-fake-doc-breadcrumb-container .fake-breadcrumb-click[data-og-type="..."]`), (elem)=>{
         elem.addEventListener("click", openHideMenu.bind(null, protyleElem));
     });
-    [].forEach.call(protyleElem.querySelectorAll(`.og-fake-doc-breadcrumb-container .${CONSTANTS.ARROW_SPAN_NAME}[data-og-type="FILE"], .og-fake-doc-breadcrumb-container .${CONSTANTS.ARROW_SPAN_NAME}[data-og-type="NOTEBOOK"]`), (elem)=>{
+    // 点击 > （常规）
+    [].forEach.call(protyleElem.querySelectorAll(`.og-fake-doc-breadcrumb-container .${CONSTANTS.ARROW_SPAN_NAME}[data-og-type="FILE"], .og-fake-doc-breadcrumb-container .${CONSTANTS.ARROW_SPAN_NAME}[data-og-type="NOTEBOOK"], .og-fake-doc-breadcrumb-container .${CONSTANTS.ARROW_SPAN_NAME}[data-og-type="ROOT"]`), (elem)=>{
         elem.addEventListener("click", openRelativeMenu.bind(null, protyleElem));
     });
     [].forEach.call(protyleElem.querySelectorAll(`.og-fake-doc-breadcrumb-container .protyle-breadcrumb__bar`), (elem)=>{
@@ -745,6 +770,23 @@ function openHideMenu(protyleElem, event) {
 
     tempMenu.open({x: rect.left, y: rect.bottom,isLeft:false});
 }
+
+function checkAndCloseLastMenu(id) {
+    if (g_relativeMenu) {
+        let tempId = g_relativeMenu["id"];
+        if (tempId === id && document.querySelector("#commonMenu[data-name='og-fdb-relative-menu']")) {
+            g_relativeMenu["menu"]?.close();
+            g_relativeMenu = null;
+            return false;
+        }
+        g_relativeMenu["menu"]?.close();
+        g_relativeMenu = null;
+    }
+    return true;
+}
+function saveLastMenu(menuObj, id) {
+    g_relativeMenu = {"menu": menuObj, "id": id};
+}
 /**
  * 打开相关文档菜单
  * @param {HTMLElement} protyleElem 
@@ -752,33 +794,35 @@ function openHideMenu(protyleElem, event) {
  * @returns 
  */
 async function openRelativeMenu(protyleElem, event) {
+    event.stopPropagation();
+    event.preventDefault();
+    event.stopImmediatePropagation();
     const maxDepth = g_setting["menuExtendSubDocDepth"];
     let id = event.currentTarget.getAttribute("data-parent-id") ?? event.currentTarget.getAttribute("data-node-id");
     let nextId = event.currentTarget.getAttribute("data-next-id");
     let thisPath = event.currentTarget.getAttribute("data-og-path");
     let box = event.currentTarget.getAttribute("data-og-box");
+    let type = event.currentTarget.getAttribute("data-og-type");
     let rect = event.currentTarget.getBoundingClientRect();
     if (!event.currentTarget.classList.contains("og-fake-doc-breadcrumb-arrow-span") && event.currentTarget.nextElementSibling) {
         rect = event.currentTarget.nextElementSibling.getBoundingClientRect();
     }
-    event.stopPropagation();
-    event.preventDefault();
-    if (g_relativeMenu) {
-        let tempId = g_relativeMenu["id"];
-        if (tempId === id && document.querySelector("#commonMenu[data-name='og-fdb-relative-menu']")) {
-            g_relativeMenu["menu"]?.close();
-            g_relativeMenu = null;
-            return;
-        }
-        g_relativeMenu["menu"]?.close();
-        g_relativeMenu = null;
+
+    if (!checkAndCloseLastMenu(id)) {
+        return;
     }
     
-    let sqlResult = [{
-        path: thisPath,
-        box: box
-    }];
-    let siblings = await getChildDocuments(id, sqlResult);
+    let siblings = [];
+
+    if (type !== "ROOT") {
+        let sqlResult = [{
+            path: thisPath,
+            box: box
+        }];
+        siblings = await getChildDocuments(id, sqlResult);
+    } else {
+        siblings = window.siyuan.notebooks.filter(item => item.closed == false);
+    }
     if (siblings.length <= 0) return;
     
     const tempMenu = new siyuan.Menu("og-fdb-relative-menu");
@@ -806,7 +850,7 @@ async function openRelativeMenu(protyleElem, event) {
         }
         
         // 对于带有子层级的文档，另外处理，主要是一些参数
-        if (currSibling.subFileCount > 0 && maxDepth > 1) {
+        if ((currSibling.subFileCount > 0 || type === "ROOT") && maxDepth > 1) {
             tempMenuItemObj.type = "submenu";
             tempMenuItemObj.submenu = [
                 {
@@ -818,24 +862,26 @@ async function openRelativeMenu(protyleElem, event) {
             tempMenuItemObj.label = `<span class="${CONSTANTS.MENU_ITEM_CLASS_NAME} ${nextId == currSibling.id ? CONSTANTS.MENU_CURRENT_DOC_CLASS_NAME : ""}" 
                 data-doc-id="${currSibling.id}"
                 data-has-children="true"
-                data-path="${currSibling.path || ''}"
-                data-box="${box}"
+                data-path="${currSibling.path || '/'}"
+                data-box="${type !== "ROOT" ? box : currSibling["id"]}"
                 data-loaded="false"
                 title="${docName}">
                 ${trimedName}
             </span>`;
         }
-        tempMenuItemObj.click = (event) => {
-            let docId = event.querySelector("[data-doc-id]")?.getAttribute("data-doc-id");
-            openRefLink(undefined, docId, {
-                ctrlKey: event?.ctrlKey,
-                shiftKey: event?.shiftKey,
-                altKey: event?.altKey,
-                metaKey: event?.metaKey,
-            }, protyleElem);
-            g_relativeMenu["menu"]?.close();
-            g_relativeMenu = null;
-        };
+        if (type !== "ROOT") {
+             tempMenuItemObj.click = (event) => {
+                let docId = event.querySelector("[data-doc-id]")?.getAttribute("data-doc-id");
+                openRefLink(undefined, docId, {
+                    ctrlKey: event?.ctrlKey,
+                    shiftKey: event?.shiftKey,
+                    altKey: event?.altKey,
+                    metaKey: event?.metaKey,
+                }, protyleElem);
+                g_relativeMenu["menu"]?.close();
+                g_relativeMenu = null;
+            };
+        }
         tempMenu.addItem(tempMenuItemObj);
     }
     // 菜单展示位置调整，仅针对首层级
@@ -858,8 +904,7 @@ async function openRelativeMenu(protyleElem, event) {
             addLazyLoadEventListeners(tempMenu.element, maxDepth, protyleElem);
         }
     }, 3);
-    
-    g_relativeMenu = {"menu": tempMenu, "id": id};
+    saveLastMenu(tempMenu, id);
 }
 
 /**
