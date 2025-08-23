@@ -989,7 +989,7 @@ function addLazyLoadEventListeners(menuElement, maxDepth, protyleElem, currentDe
                     docTitleEl.setAttribute('data-loaded', 'false');
                 }
                 
-                docTitleEl.textContent = trimedName;
+                docTitleEl.textContent = decodeHtmlEntities(trimedName);
                 labelEl.appendChild(docTitleEl);
                 menuItemEl.appendChild(labelEl);
                 
@@ -1442,6 +1442,29 @@ async function sqlAPI(stmt) {
     };
     let url = `/api/query/sql`;
     return parseBody(request(url, data));
+}
+
+/**
+ * 将常见 HTML 字符实体转为正常字符
+ * @param {string} inputStr - 输入字符串
+ * @returns {string} - 转换后的字符串
+ */
+function decodeHtmlEntities(inputStr) {
+  if (!inputStr) return "";
+
+  const entitiesMap = {
+    "&lt;": "<",
+    "&gt;": ">",
+    "&nbsp;": " ",
+    "&quot;": '"',
+    "&amp;": "&",
+    // "&apos;": "'",
+    // "&#169;": "©"
+  };
+
+  const pattern = new RegExp(Object.keys(entitiesMap).join("|"), "g");
+
+  return inputStr.replace(pattern, match => entitiesMap[match]);
 }
 
 /**
