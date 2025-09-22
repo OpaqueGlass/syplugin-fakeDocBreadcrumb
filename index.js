@@ -1848,17 +1848,14 @@ function generateSettingPanel(settingObjectArray, language = {}) {
     const fragment = document.createDocumentFragment();
 
     for (const oneSettingProperty of settingObjectArray) {
-        // 1. 创建每个设置项的根容器 <label>
-        const labelContainer = document.createElement("label");
-        
-        // 根据类型为容器设置基础 class
-        if (oneSettingProperty.type === "TEXTAREA") {
-            labelContainer.className = "b3-label fn__flex";
+        // 1. 创建每个设置项的根容器
+        let outterItemContainer;
+        if (oneSettingProperty.type === "SWITCH") {
+            outterItemContainer = document.createElement("label");
+            outterItemContainer.className = "fn__flex b3-label";
         } else {
-            labelContainer.className = "fn__flex b3-label";
-            if (oneSettingProperty.type === "TEXT") {
-                labelContainer.classList.add("config__item");
-            }
+            outterItemContainer = document.createElement("div");
+            outterItemContainer.className = "fn__flex b3-label config__item";
         }
 
         // 2. 创建左侧的标题和描述区域
@@ -1884,7 +1881,7 @@ function generateSettingPanel(settingObjectArray, language = {}) {
             infoDiv.appendChild(descriptionElement);
         }
 
-        labelContainer.appendChild(infoDiv);
+        outterItemContainer.appendChild(infoDiv);
 
         // 3. 根据类型创建右侧的交互控件
         let controlElement = null;
@@ -1942,7 +1939,7 @@ function generateSettingPanel(settingObjectArray, language = {}) {
             }
             case "BUTTON": { // ✨ 新增对 BUTTON 的支持
                 controlElement = document.createElement("button");
-                controlElement.className = "b3-button b3-button--outline fn__flex-center";
+                controlElement.className = "b3-button b3-button--outline fn__flex-center fn__size200";
                 controlElement.type = "button";
                 // 按钮文本可由 settingObject 的 `buttonText` 属性指定
                 controlElement.textContent = oneSettingProperty.buttonText || "执行操作 Click to Run";
@@ -1966,13 +1963,13 @@ function generateSettingPanel(settingObjectArray, language = {}) {
             if (oneSettingProperty.simpId) controlElement.name = oneSettingProperty.simpId;
 
             // 添加一个间隔元素
-            labelContainer.appendChild(document.createElement("span")).className = "fn__space";
+            outterItemContainer.appendChild(document.createElement("span")).className = "fn__space";
             // 将控件添加到容器
-            labelContainer.appendChild(controlElement);
+            outterItemContainer.appendChild(controlElement);
         }
 
         // 5. 将构建好的整个设置项添加到文档片段中
-        fragment.appendChild(labelContainer);
+        fragment.appendChild(outterItemContainer);
     }
 
     return fragment;

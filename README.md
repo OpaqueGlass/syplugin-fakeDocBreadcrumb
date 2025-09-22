@@ -27,3 +27,4 @@ Please go to [github repository](https://github.com/OpaqueGlass/syplugin-fakeDoc
 | [leolee9086](https://github.com/leolee9086) / [cc-template](https://github.com/leolee9086/cc-template) | Render template in widget; [Mulan Permissive Software License，Version 2](https://github.com/leolee9086/cc-template/blob/main/LICENSE) | Click to open the doc. |
 | [zuoez02](https://github.com/zuoez02)/[siyuan-plugin-system](https://github.com/zuoez02/siyuan-plugin-system) | A plugin system for siyuan                                   |                        |
 | [Hug-Zephyr](https://github.com/Hug-Zephyr)/[HZ-syplugin-fakeDocBreadcrumb](https://github.com/Hug-Zephyr/HZ-syplugin-fakeDocBreadcrumb) |        fork-repo, with some enhancements                                              |              |
+| [TCOTC](https://github.com/TCOTC) |        feedback                                             | see issue #30~32             |
