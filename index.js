@@ -35,6 +35,7 @@ let g_initRetryInterval;
 let g_initFailedMsgTimeout;
 let g_TIMER_LABLE_NAME_COMPARE = "文档面包屑插件";
 let g_writeStorage;
+let g_pluginInstance;
 let g_relativeMenu;
 let g_isMobile = false;
 let g_hidedBreadcrumb = false;
@@ -75,6 +76,7 @@ let g_setting_default = {
     "menuExtendSubDocDepth": 2,
     "swapClickFunction": false,
     "showRoot": false,
+    "@version": 20250922
 };
 /**
  * Plugin类
@@ -86,6 +88,7 @@ class FakeDocBreadcrumb extends siyuan.Plugin {
     onload() {
         g_isMobile = isMobile();
         language = this.i18n;
+        g_pluginInstance = this;
         // 读取配置
         // TODO: 读取配置API变更
         Object.assign(g_setting, g_setting_default);
@@ -103,22 +106,26 @@ class FakeDocBreadcrumb extends siyuan.Plugin {
             // 解析并载入配置
             try {
                 debugPush("载入配置中",settingCache);
+                // let resetFlag = false;
+                // if (settingCache["@version"]) {
+                //     if (settingCache["@version"] < g_setting_default["@version"]) {
+                //         resetFlag = true;
+                //     }
+                // } else {
+                //     resetFlag = true;
+                // }
+                // if (resetFlag) {
+                //     if (settingCache["oneLineBreadcrumb"] == true) {
+                //         settingCache["oneLineBreadcrumb"] = false;
+                //         showMessage(``)
+                //     }
+                // }
                 // let settingData = JSON.parse(settingCache);
                 Object.assign(g_setting, settingCache);
                 this.eventBusInnerHandler();
             }catch(e){
                 warnPush("og-fdb载入配置时发生错误",e);
             }
-            // console.log("LOADED",settingData);
-            // console.log("LOADED_R", g_setting);
-            // 开始运行
-            // try {
-            //     setObserver();
-            //     setStyle();
-            // }catch(e) {
-            //     errorPush("文档导航插件首次初始化失败", e);
-                // g_initRetryInterval = setInterval(initRetry, 2500);
-            // }  
             if (!initRetry()) {
                 errorPush("初始化失败，2秒后执行一次重试");
                 setTimeout(initRetry, 2000);
@@ -690,14 +697,14 @@ function setAndApply(finalElement, docId, eventProtyle) {
     // v0.2.10应该是修改为仅范围内生效了，不再需要remove了
     // 点击 文件类型
     [].forEach.call(protyleElem.querySelectorAll(`.og-fake-doc-breadcrumb-container .fake-breadcrumb-click[data-og-type="FILE"]`), (elem)=>{
-        elem.addEventListener("mouseup", openRefLinkAgent.bind(null, "FILE", protyleElem));
+        elem.addEventListener("mouseup", clickBreadcrumbItemAgent.bind(null, "FILE", protyleElem));
     });
     // 点击 笔记本类型
     [].forEach.call(protyleElem.querySelectorAll(`.og-fake-doc-breadcrumb-container .fake-breadcrumb-click[data-og-type="NOTEBOOK"]`), (elem)=>{
-        elem.addEventListener("mouseup", openRefLinkAgent.bind(null, "NOTEBOOK", protyleElem));
+        elem.addEventListener("mouseup", clickBreadcrumbItemAgent.bind(null, "NOTEBOOK", protyleElem));
     });
     [].forEach.call(protyleElem.querySelectorAll(`.og-fake-doc-breadcrumb-container .fake-breadcrumb-click[data-og-type="ROOT"]`), (elem)=>{
-        elem.addEventListener("mouseup", openRefLinkAgent.bind(null, "ROOT", protyleElem));
+        elem.addEventListener("mouseup", clickBreadcrumbItemAgent.bind(null, "ROOT", protyleElem));
     });
     // 点击折叠区域
     [].forEach.call(protyleElem.querySelectorAll(`.og-fake-doc-breadcrumb-container .fake-breadcrumb-click[data-og-type="..."]`), (elem)=>{
@@ -717,12 +724,12 @@ function setAndApply(finalElement, docId, eventProtyle) {
     }
 }
 
-function openRefLinkAgent(type, protyleElem, event) {
+function clickBreadcrumbItemAgent(type, protyleElem, event) {
     event.preventDefault();
     event.stopPropagation();
     if (g_setting.swapClickFunction) {
         if (event.button == 2 && type === "FILE") {
-            openRefLink(event, null, null, protyleElem);
+            openRefLinkAgent(event, null, null, protyleElem);
         } else if (event.button != 2) {
             openRelativeMenu(protyleElem, event);
         }
@@ -730,7 +737,7 @@ function openRefLinkAgent(type, protyleElem, event) {
         if (event.button == 2) {
             openRelativeMenu(protyleElem, event);
         } else if (type == "FILE") {
-            openRefLink(event, null, null, protyleElem);
+            openRefLinkAgent(event, null, null, protyleElem);
         }
     }
 }
@@ -755,14 +762,20 @@ function openHideMenu(protyleElem, event) {
                 title="${name}">
                 ${trimedName}
             </span>`,
-            click: (event)=>{
-                let docId = event.querySelector("[data-doc-id]")?.getAttribute("data-doc-id")
-                openRefLink(undefined, docId, {
-                    ctrlKey: event?.ctrlKey,
-                    shiftKey: event?.shiftKey,
-                    altKey: event?.altKey,
-                    metaKey: event?.metaKey,
-                }, protyleElem);
+            click: (htmlElement, event)=>{
+                let docId = htmlElement.querySelector("[data-doc-id]")?.getAttribute("data-doc-id");
+                event.preventDefault();
+                event.stopImmediatePropagation();
+                event.stopPropagation();
+                openRefLinkByAPI({
+                    paramDocId: docId,
+                    keyParam: {
+                        ctrlKey: event?.ctrlKey,
+                        shiftKey: event?.shiftKey,
+                        altKey: event?.altKey,
+                        metaKey: event?.metaKey,
+                    },
+                });
             }
         }
         tempMenu.addItem(tempMenuItemObj);
@@ -870,14 +883,20 @@ async function openRelativeMenu(protyleElem, event) {
             </span>`;
         }
         if (type !== "ROOT") {
-             tempMenuItemObj.click = (event) => {
-                let docId = event.querySelector("[data-doc-id]")?.getAttribute("data-doc-id");
-                openRefLink(undefined, docId, {
-                    ctrlKey: event?.ctrlKey,
-                    shiftKey: event?.shiftKey,
-                    altKey: event?.altKey,
-                    metaKey: event?.metaKey,
-                }, protyleElem);
+             tempMenuItemObj.click = (htmlElement, event) => {
+                let docId = htmlElement.querySelector("[data-doc-id]")?.getAttribute("data-doc-id");
+                event.preventDefault();
+                event.stopImmediatePropagation();
+                event.stopPropagation();
+                openRefLinkByAPI({
+                    paramDocId: docId,
+                    keyParam: {
+                        ctrlKey: event?.ctrlKey,
+                        shiftKey: event?.shiftKey,
+                        altKey: event?.altKey,
+                        metaKey: event?.metaKey,
+                    },
+                });
                 g_relativeMenu["menu"]?.close();
                 g_relativeMenu = null;
             };
@@ -1027,12 +1046,18 @@ function addLazyLoadEventListeners(menuElement, maxDepth, protyleElem, currentDe
                 }
                 menuItemEl.addEventListener('click', (event) => {
                     const docId = docTitleEl.getAttribute('data-doc-id');
-                    openRefLink(undefined, docId, {
-                        ctrlKey: event?.ctrlKey,
-                        shiftKey: event?.shiftKey,
-                        altKey: event?.altKey,
-                        metaKey: event?.metaKey,
-                    }, protyleElem);
+                    event.preventDefault();
+                    event.stopImmediatePropagation();
+                    event.stopPropagation();
+                    openRefLinkByAPI({
+                        paramDocId: docId,
+                        keyParam: {
+                            ctrlKey: event?.ctrlKey,
+                            shiftKey: event?.shiftKey,
+                            altKey: event?.altKey,
+                            metaKey: event?.metaKey,
+                        },
+                    });
                     // 手动绑定的不能触发菜单关闭，这里自行处理一下
                     g_relativeMenu["menu"]?.close();
                     g_relativeMenu = null;
@@ -1467,6 +1492,25 @@ function decodeHtmlEntities(inputStr) {
   return inputStr.replace(pattern, match => entitiesMap[match]);
 }
 
+function openRefLinkAgent(event, paramId = "", keyParam = undefined, protyleElem = undefined, openInFocus = !g_setting.preferOpenInCurrentSplit) {
+    openRefLinkByAPI({
+        mouseEvent: event,
+        paramDocId: paramId,
+        keyParam: keyParam,
+        preventDefault: !g_setting.preferOpenInCurrentSplit,
+    });
+    // if (g_setting.oneLineBreadcrumb) {
+    //     openRefLinkByAPI({
+    //         mouseEvent: event,
+    //         paramDocId: paramId,
+    //         keyParam: keyParam,
+    //         preventDefault: !g_setting.preferOpenInCurrentSplit,
+    //     });
+    // } else {
+    //     openRefLink(event, paramId, keyParam, protyleElem, openInFocus);
+    // }
+}
+
 /**
  * 在点击<span data-type="block-ref">时打开思源块/文档
  * 为引入本项目，和原代码相比有更改
@@ -1477,6 +1521,7 @@ function decodeHtmlEntities(inputStr) {
  * @param {keyParam} keyParam event的Key，主要是ctrlKey shiftKey等，此项仅在event无效时使用
  * @param {protyle} protyleElem 如果不为空打开文档点击事件将在该Elem上发起
  * @param {boolean} openInFocus 在当前聚焦的窗口中打开，给定此项为true，则优于protyle选项生效
+ * @deprecated 如非使用”在当前聚焦的窗口中打开“功能，请切换到openRefLinkByAPI
  */
 function openRefLink(event, paramId = "", keyParam = undefined, protyleElem = undefined, openInFocus = !g_setting.preferOpenInCurrentSplit){
     let 主界面= window.parent.document
@@ -1530,6 +1575,156 @@ function openRefLink(event, paramId = "", keyParam = undefined, protyleElem = un
     window.getSelection()?.removeAllRanges();
     虚拟链接.dispatchEvent(clickEvent);
     虚拟链接.remove();
+}
+
+function getPluginInstance() {
+    return g_pluginInstance;
+}
+let cacheIsMacOs;
+function isMacOs() {
+	let platform = window.top.siyuan.config.system.os ?? navigator.platform ?? "ERROR";
+    platform = platform.toUpperCase();
+    let isMacOSFlag = cacheIsMacOs;
+    if (cacheIsMacOs == undefined) {
+        for (let platformName of ["DARWIN", "MAC", "IPAD", "IPHONE", "IOS"]) {
+            if (platform.includes(platformName)) {
+                isMacOSFlag = true;
+                break;
+            }
+        }
+        cacheIsMacOs = isMacOSFlag;
+    }
+	if (isMacOSFlag == undefined) {
+		isMacOSFlag = false;
+	}
+	return isMacOSFlag;
+}
+
+function isEventCtrlKey(event) {
+    if (isMacOs()) {
+        return event.metaKey;
+    }
+    return event.ctrlKey;
+}
+
+let lastClickTime_openRefLinkByAPI = 0;
+/**
+ * 基于API的打开思源块/文档
+ * @param mouseEvent 鼠标点击事件，如果存在，优先使用
+ * @param paramDocId 如果没有指定 event，使用此参数作为文档id
+ * @param keyParam 如果没有event，使用此次数指定ctrlKey后台打开、shiftKey下方打开、altKey右侧打开
+ * @param openInFocus 是否以聚焦块的方式打开（此参数有变动）
+ * @param removeCurrentTab 是否移除当前Tab
+ * @param autoRemoveJudgeMiliseconds 自动判断是否移除当前Tab的时间间隔（0则 不自动判断）
+ * @param preventDefault {boolean} 控制是否禁止默认行为以及冒泡操作；如果在菜单中，请在调用前禁止冒泡和默认行为；另外，也可充当是否在当前聚焦窗口打开的控制（false，则在面包屑所在文档打开）
+ * @returns 
+ */
+function openRefLinkByAPI({mouseEvent, paramDocId = "", keyParam = {}, openInFocus = undefined, removeCurrentTab = undefined, autoRemoveJudgeMiliseconds = 0, preventDefault = false}) {
+    let docId;
+    if (mouseEvent && mouseEvent.currentTarget?.getAttribute("data-node-id")) {
+        docId = mouseEvent.currentTarget?.getAttribute("data-node-id");
+    } else if (mouseEvent && mouseEvent.currentTarget?.getAttribute("data-id")) {
+        docId = (mouseEvent.currentTarget)?.getAttribute("data-id");
+    } else if (mouseEvent && mouseEvent && mouseEvent.currentTarget?.getAttribute("data-og-node-id")) {
+        docId = mouseEvent.currentTarget?.getAttribute("data-og-node-id");
+    } else {
+        docId = paramDocId;
+    }
+    // 处理笔记本等无法跳转的情况
+    if (!isValidStr(docId)) {
+        debugPush("错误的id", docId)
+        return;
+    }
+    if (isMobile()) {
+        // openMobileFileById(getPluginInstance().app, docId);
+        return;
+    }
+    logPush("Try open By id", docId);
+    // 需要冒泡，否则不能在所在页签打开
+    if (preventDefault) {
+        mouseEvent?.preventDefault();
+        mouseEvent?.stopPropagation();
+    }
+    debugPush("openRefLinkEventAPIF", mouseEvent);
+    if (mouseEvent) {
+        keyParam = {};
+        keyParam["ctrlKey"] = mouseEvent.ctrlKey;
+        keyParam["shiftKey"] = mouseEvent.shiftKey;
+        keyParam["altKey"] = mouseEvent.altKey;
+        keyParam["metaKey"] = mouseEvent.metaKey;
+    }
+    let positionKey = undefined;
+    if (keyParam["altKey"]) {
+        positionKey = "right";
+    } else if (keyParam["shiftKey"]) {
+        positionKey = "bottom";
+    }
+    if (autoRemoveJudgeMiliseconds > 0) {
+        if (Date.now() - lastClickTime_openRefLinkByAPI < autoRemoveJudgeMiliseconds) {
+            removeCurrentTab = true;
+        }
+        lastClickTime_openRefLinkByAPI = Date.now();
+    }
+    // 手动关闭
+    const needToCloseDocId = getCurrentDocIdF(true);
+    
+    const finalParam = {
+        app: getPluginInstance().app,
+        doc: {
+            id: docId,
+            zoomIn: openInFocus
+        },
+        position: positionKey,
+        keepCursor: isEventCtrlKey(keyParam) ? true : undefined,
+        removeCurrentTab: removeCurrentTab, // 目前这个选项的行为是：true，则当前页签打开；false，则根据思源设置：新页签打开
+    };
+    debugPush("打开文档执行参数", finalParam);
+    siyuan.openTab(finalParam);
+    // 后台打开页签不可移除
+    if (removeCurrentTab && !isEventCtrlKey(keyParam)) {
+        debugPush("插件自行移除页签");
+        removeCurrentTabF(needToCloseDocId);
+        removeCurrentTab = false;
+    }
+}
+
+function removeCurrentTabF(docId) {
+    // 获取tabId
+    if (!isValidStr(docId)) {
+        docId = getCurrentDocIdF(true);
+    }
+    if (!isValidStr(docId)) {
+        debugPush("错误的id或多个匹配id");
+        return;
+    }
+    // v3.1.11或以上
+    if (siyuan?.getAllEditor) {
+        const editor = siyuan.getAllEditor();
+        let protyle = null;
+        for (let i = 0; i < editor.length; i++) {
+            if (editor[i].protyle.block.rootID === docId) {
+                protyle = editor[i].protyle;
+                break;
+            }
+        }
+        if (protyle) {
+            if (protyle.model.headElement) {
+                if (protyle.model.headElement.classList.contains("item--pin")) {
+                    debugPush("Pin页面，不关闭存在页签");
+                    return;
+                }
+            }
+            //id: string, closeAll = false, animate = true, isSaveLayout = true
+            debugPush("关闭存在页签", protyle?.model?.parent?.parent, protyle.model?.parent?.id);
+            protyle?.model?.parent?.parent?.removeTab(protyle.model?.parent?.id, false, false);
+        } else {
+            debugPush("没有找到对应的protyle，不关闭存在的页签");
+            return;
+        }
+    } else { // v3.1.10或以下
+        return;
+    }
+
 }
 
 function isValidStr(s){
