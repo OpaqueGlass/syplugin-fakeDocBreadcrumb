@@ -515,7 +515,7 @@ async function generateElement(pathObjects, docId, protyle) {
         >
         <use xlink:href="#iconRight"></use></svg></span>
         `;
-    const oneItem = `<span class="protyle-breadcrumb__item fake-breadcrumb-click" %FLOATWINDOW% data-node-id="%0%" data-og-type="%3%" data-node-names="%NAMES%"  data-next-id="%6%" data-og-path="%7%" data-og-box="%8%">
+    const oneItem = `<span class="protyle-breadcrumb__item fake-breadcrumb-click" %FLOATWINDOW% data-og-node-id="%0%" data-og-type="%3%" data-node-names="%NAMES%"  data-next-id="%6%" data-og-path="%7%" data-og-box="%8%">
         %4%
         <span class="protyle-breadcrumb__text" title="%1%">%2%</span>
     </span>
@@ -736,7 +736,7 @@ function openRefLinkAgent(type, protyleElem, event) {
 }
 
 function openHideMenu(protyleElem, event) {
-    let ids = JSON.parse(event.currentTarget.getAttribute("data-node-id").replaceAll(`'`, `"`));
+    let ids = JSON.parse(event.currentTarget.getAttribute("data-og-node-id").replaceAll(`'`, `"`));
     let names = JSON.parse(event.currentTarget.getAttribute("data-node-names").replaceAll(`'`, `"`));
     let rect = event.currentTarget.getBoundingClientRect();
     event.stopPropagation();
@@ -798,7 +798,7 @@ async function openRelativeMenu(protyleElem, event) {
     event.preventDefault();
     event.stopImmediatePropagation();
     const maxDepth = g_setting["menuExtendSubDocDepth"];
-    let id = event.currentTarget.getAttribute("data-parent-id") ?? event.currentTarget.getAttribute("data-node-id");
+    let id = event.currentTarget.getAttribute("data-parent-id") ?? event.currentTarget.getAttribute("data-og-node-id");
     let nextId = event.currentTarget.getAttribute("data-next-id");
     let thisPath = event.currentTarget.getAttribute("data-og-path");
     let box = event.currentTarget.getAttribute("data-og-box");
@@ -1483,6 +1483,8 @@ function openRefLink(event, paramId = "", keyParam = undefined, protyleElem = un
     let id;
     if (event && event.currentTarget && event.currentTarget.getAttribute("data-node-id")) {
         id = event.currentTarget.getAttribute("data-node-id");
+    } else if (event && event.currentTarget && event.currentTarget.getAttribute("data-og-node-id")){
+        id = event.currentTarget.getAttribute("data-og-node-id");
     }else{
         id = paramId;
     }
