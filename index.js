@@ -191,6 +191,7 @@ class FakeDocBreadcrumb extends siyuan.Plugin {
         settingForm.appendChild(generateSettingPanel([
             new SettingProperty("RESERVE_HINT", "HINT", null),
             new SettingProperty("autoFixFocusError", "SWITCH"),
+            new SettingProperty("batchFixFocusError", "BUTTON", null, tryToFixAllError),
             new SettingProperty("docMaxNum", "NUMBER", [0, 1024]),
             new SettingProperty("nameMaxLength", "NUMBER", [0, 1024]),
             new SettingProperty("showNotebook", "SWITCH", null),
@@ -358,15 +359,23 @@ async function mainEventBusHander(detail) {
     // 处理插件的bug
     function fixbug() {
         const docId = protyle.block.rootID;
+        let exitFocusBtn = protyle.element.querySelector(".protyle-breadcrumb__icon.ariaLabel");
         if (window.siyuan.storage["local-fileposition"] && window.siyuan.storage["local-fileposition"][docId]) {
-            if (window.siyuan.storage["local-fileposition"][docId]["zoomInId"] === docId) {
+            if (window.siyuan.storage["local-fileposition"][docId]["zoomInId"] === docId && exitFocusBtn) {
                 if (g_setting.autoFixFocusError && !g_tryFixErrorDoc[docId]) {
-                    siyuan.showMessage("Error 发现由于插件导致的 聚焦位置为全文档 错误，正在自动处理；若文档未自动关闭，或文档重开后问题依旧，请手动处理或升级至思源最新版本：（通过点击块面包屑的任意块，然后点击退出聚焦修复此问题）--- 消息来自插件fakeDocBreadcrumb", 0);
-                    let exitFocusBtn = protyle.element.querySelector(".protyle-breadcrumb__icon.ariaLabel");
-                    logPush("aaa", protyle.element.querySelector(".protyle-breadcrumb__icon.ariaLabel"));
-                    logPush("bbb", protyle.element.querySelector(".protyle-breadcrumb > .protyle-breadcrumb__bar"));
-                    logPush("ccc", protyle.element.querySelector(".protyle-breadcrumb > .protyle-breadcrumb__bar").lastElementChild)
+                    if (!window["OG_FDB_NO_WARNING"]) {
+                        siyuan.showMessage(language["fixOpenDocErrorAutoWarn"], 0);
+                    }
+                    logPush("exit focus button", protyle.element.querySelector(".protyle-breadcrumb__icon.ariaLabel"));
+                    logPush("块面包屑", protyle.element.querySelector(".protyle-breadcrumb > .protyle-breadcrumb__bar"));
+                    logPush("最后块面包屑", protyle.element.querySelector(".protyle-breadcrumb > .protyle-breadcrumb__bar").lastElementChild)
                     let lastBreadItem = protyle.element.querySelector(".protyle-breadcrumb > .protyle-breadcrumb__bar").lastElementChild;
+                    if (lastBreadItem.getAttribute("data-og-box")) {
+                        logPush("修复可能失败", lastBreadItem);
+                    }
+                    if (exitFocusBtn.getAttribute("data-type") !== "exit-focus") {
+                        logPush("修复可能失败 btn", exitFocusBtn);
+                    }
                     if (lastBreadItem) {
                         lastBreadItem.click();
                         if (exitFocusBtn) {
@@ -376,8 +385,11 @@ async function mainEventBusHander(detail) {
                             g_tryFixErrorDoc[docId] = true;
                         }
                     }
-                } else {
-                    siyuan.showMessage("Error 发现由于插件导致的 聚焦位置为全文档 错误，您可以通过点击块面包屑的任意块，然后点击退出聚焦修复此问题。或在插件设置中启用打开文档时自动修复");
+                } else if (!g_tryFixErrorDoc[docId]) {
+                    if (!window["OG_FDB_NO_WARNING"]) {
+                        siyuan.showMessage(language["fixOpenDocErrorManualWarn"], 0);
+                    }
+                    g_tryFixErrorDoc[docId] = true;
                 }
                 
             }
@@ -558,7 +570,7 @@ async function generateElement(pathObjects, docId, protyle) {
         >
         <use xlink:href="#iconRight"></use></svg></span>
         `;
-    const oneItem = `<span class="protyle-breadcrumb__item fake-breadcrumb-click" %FLOATWINDOW% data-og-node-id="%0%" data-og-type="%3%" data-node-names="%NAMES%"  data-next-id="%6%" data-og-path="%7%" data-og-box="%8%">
+    const oneItem = `<span class="protyle-breadcrumb__item fake-breadcrumb-click" %FLOATWINDOW% data-og-doc-node-id="%0%" data-og-type="%3%" data-node-names="%NAMES%"  data-next-id="%6%" data-og-path="%7%" data-og-box="%8%">
         %4%
         <span class="protyle-breadcrumb__text" title="%1%">%2%</span>
     </span>
@@ -779,7 +791,7 @@ function clickBreadcrumbItemAgent(type, protyleElem, event) {
 }
 
 function openHideMenu(protyleElem, event) {
-    let ids = JSON.parse(event.currentTarget.getAttribute("data-og-node-id").replaceAll(`'`, `"`));
+    let ids = JSON.parse(event.currentTarget.getAttribute("data-og-doc-node-id").replaceAll(`'`, `"`));
     let names = JSON.parse(event.currentTarget.getAttribute("data-node-names").replaceAll(`'`, `"`));
     let rect = event.currentTarget.getBoundingClientRect();
     event.stopPropagation();
@@ -847,7 +859,7 @@ async function openRelativeMenu(protyleElem, event) {
     event.preventDefault();
     event.stopImmediatePropagation();
     const maxDepth = g_setting["menuExtendSubDocDepth"];
-    let id = event.currentTarget.getAttribute("data-parent-id") ?? event.currentTarget.getAttribute("data-og-node-id");
+    let id = event.currentTarget.getAttribute("data-parent-id") ?? event.currentTarget.getAttribute("data-og-doc-node-id");
     let nextId = event.currentTarget.getAttribute("data-next-id");
     let thisPath = event.currentTarget.getAttribute("data-og-path");
     let box = event.currentTarget.getAttribute("data-og-box");
@@ -1550,6 +1562,47 @@ function openRefLinkAgent(event, paramId = "", keyParam = undefined, protyleElem
     //     openRefLink(event, paramId, keyParam, protyleElem, openInFocus);
     // }
 }
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+async function tryToFixAllError() {
+    if (!g_setting.autoFixFocusError) {
+        siyuan.showMessage(language["autoFixEnableFirst"] + "--- fakeDocBreadcrumb");
+        return;
+    }
+    if (window.siyuan.dialogs.length == 1) {
+        window.siyuan.dialogs[0].destroy();
+    } else {
+        siyuan.showMessage(language["closeOtherDialog"] + " --- fakeDocBreadcrumb");
+    }
+    if (window["OG_FDB_NO_WARNING"] == true) {
+        siyuan.showMessage(language["onlyOneRunning"] + " --- fakeDocBreadcrumb");
+        return;
+    }
+    try {
+        window["OG_FDB_NO_WARNING"] = true;
+        siyuan.showMessage(language["batchFixStart"] + "--- fakeDocBreadcrumb")
+        const list = window.siyuan.storage["local-fileposition"];
+        if (list) {
+            for (let key in list) {
+                if (list.hasOwnProperty(key)) {
+                    if (list[key] && list[key]["zoomInId"] === key ) {
+                        openRefLinkByAPI({
+                            paramDocId: key
+                        });
+                        await sleep(5000);
+                    }
+                }
+            }
+        }
+    } catch (err) {
+        errorPush(err);
+    } finally {
+        siyuan.showMessage(language["batchFixEnd"] + "--- fakeDocBreadcrumb")
+        window["OG_FDB_NO_WARNING"] = false;
+    }
+    
+}
 
 /**
  * 在点击<span data-type="block-ref">时打开思源块/文档
@@ -1568,8 +1621,8 @@ function openRefLink(event, paramId = "", keyParam = undefined, protyleElem = un
     let id;
     if (event && event.currentTarget && event.currentTarget.getAttribute("data-node-id")) {
         id = event.currentTarget.getAttribute("data-node-id");
-    } else if (event && event.currentTarget && event.currentTarget.getAttribute("data-og-node-id")){
-        id = event.currentTarget.getAttribute("data-og-node-id");
+    } else if (event && event.currentTarget && event.currentTarget.getAttribute("data-og-doc-node-id")){
+        id = event.currentTarget.getAttribute("data-og-doc-node-id");
     }else{
         id = paramId;
     }
@@ -1665,8 +1718,8 @@ function openRefLinkByAPI({mouseEvent, paramDocId = "", keyParam = {}, openInFoc
         docId = mouseEvent.currentTarget?.getAttribute("data-node-id");
     } else if (mouseEvent && mouseEvent.currentTarget?.getAttribute("data-id")) {
         docId = (mouseEvent.currentTarget)?.getAttribute("data-id");
-    } else if (mouseEvent && mouseEvent && mouseEvent.currentTarget?.getAttribute("data-og-node-id")) {
-        docId = mouseEvent.currentTarget?.getAttribute("data-og-node-id");
+    } else if (mouseEvent && mouseEvent && mouseEvent.currentTarget?.getAttribute("data-og-doc-node-id")) {
+        docId = mouseEvent.currentTarget?.getAttribute("data-og-doc-node-id");
     } else {
         docId = paramDocId;
     }
@@ -1892,8 +1945,9 @@ function generateSettingPanel(settingObjectArray, language = {}) {
                 controlElement.className = "b3-button b3-button--outline fn__flex-center";
                 controlElement.type = "button";
                 // 按钮文本可由 settingObject 的 `buttonText` 属性指定
-                controlElement.textContent = oneSettingProperty.buttonText || "执行操作";
+                controlElement.textContent = oneSettingProperty.buttonText || "执行操作 Click to Run";
                 // 可以从 settingObject 传入一个 onClick 回调函数
+                logPush("test", typeof oneSettingProperty.onClick)
                 if (typeof oneSettingProperty.onClick === 'function') {
                     controlElement.addEventListener('click', oneSettingProperty.onClick);
                 }

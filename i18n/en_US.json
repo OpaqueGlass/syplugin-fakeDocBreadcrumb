@@ -43,6 +43,19 @@
 
     "conflict_plugin_oneline_breadcrumb": "Detected conflicting plugins (occupying the line below breadcrumbs). The fakeDocBreadcrumb plugin suggest enable the \"🧪 Display the document breadcrumb on the same line as the block breadcrumb\" feature.",
 
+    "fixOpenDocErrorAutoWarn": "WARN Detected a 'focus position is the entire document' error caused by fakeDocBreadcrumb plugin. The plugin is automatically handling it; if the document does not close automatically, or the issue persists after reopening the document, please resolve it manually or upgrade to the latest version of Siyuan: (Click any block in the block breadcrumb, then click 'Exit Focus' to fix this issue) --- Message from plugin fakeDocBreadcrumb",
+    "fixOpenDocErrorManualWarn": "WARN Detected a \"focus position is the entire document\" error caused by fakeDocBreadcrumb plugin. You can fix this issue by clicking any block in the block breadcrumb and then clicking 'Exit Focus'. Alternatively, enable 'Automatically repair when opening documents' in the plugin settings; this message will no longer appear during this run. --- Message from plugin fakeDocBreadcrumb",
+    "setting_autoFixFocusError_name": "Automatically repair when opening documents",
+    "setting_autoFixFocusError_desp": "When enabled, the plugin will attempt to automatically repair the issue when a document is opened. If the automatic repair fails, please try manual repair: (Click any block breadcrumb, then click 'Exit Focus' to fix this issue)",
+    "setting_batchFixFocusError_name": "Automatically fix errors (batch processing)",
+    "setting_batchFixFocusError_desp": "Please first enable 'Automatically repair when opening documents', open the problematic document to confirm the auto-repair function works properly; if auto-repair functions correctly, clicking the button on the right will automatically perform batch processing",
+
+    "autoFixEnableFirst": "This feature can only be used after enabling the 'Automatically repair when opening documents' setting.",
+    "closeOtherDialog": "Please close other dialogs, leaving only the plugin settings",
+    "batchFixEnd": "Attempted repair completed",
+    "batchFixStart": "Starting attempt to automatically repair. During this process, the plugin will automatically open documents.",
+    "onlyOneRunning": "Only one repair process can run at a time",
+
     "setting_experimental": "(Experimental Feature. UNSTABLE. May be removed at any time) ",
 
     "loading": "Loading...",
