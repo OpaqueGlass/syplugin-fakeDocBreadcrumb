@@ -39,6 +39,7 @@ let g_pluginInstance;
 let g_relativeMenu;
 let g_isMobile = false;
 let g_hidedBreadcrumb = false;
+let g_tryFixErrorDoc = {};
 let g_setting = {
     "nameMaxLength": null,
     "docMaxNum": null,
@@ -76,7 +77,8 @@ let g_setting_default = {
     "menuExtendSubDocDepth": 2,
     "swapClickFunction": false,
     "showRoot": false,
-    "@version": 20250922
+    "@version": 20250922,
+    "autoFixFocusError": false,
 };
 /**
  * Plugin类
@@ -186,8 +188,9 @@ class FakeDocBreadcrumb extends siyuan.Plugin {
         const hello = document.createElement('div');
         const settingForm = document.createElement("form");
         settingForm.setAttribute("name", CONSTANTS.PLUGIN_NAME);
-        settingForm.innerHTML = generateSettingPanelHTML([
+        settingForm.appendChild(generateSettingPanel([
             new SettingProperty("RESERVE_HINT", "HINT", null),
+            new SettingProperty("autoFixFocusError", "SWITCH"),
             new SettingProperty("docMaxNum", "NUMBER", [0, 1024]),
             new SettingProperty("nameMaxLength", "NUMBER", [0, 1024]),
             new SettingProperty("showNotebook", "SWITCH", null),
@@ -207,7 +210,7 @@ class FakeDocBreadcrumb extends siyuan.Plugin {
             new SettingProperty("immediatelyUpdate", "SWITCH", null),
             new SettingProperty("menuExtendSubDocDepth", "NUMBER", [1, 7]),
             new SettingProperty("swapClickFunction", "SWITCH", null),
-        ]);
+        ]));
 
         hello.appendChild(settingForm);
         settingDialog.element.querySelector(`#${CONSTANTS.PLUGIN_NAME}-form-content`).appendChild(hello);
@@ -296,6 +299,7 @@ class SettingProperty {
     type;
     limit;
     value;
+    onClick;
     /**
      * 设置属性对象
      * @param {*} id 唯一定位id
@@ -305,14 +309,17 @@ class SettingProperty {
     constructor(id, type, limit, value = undefined) {
         this.id = `${CONSTANTS.PLUGIN_NAME}_${id}`;
         this.simpId = id;
-        this.name = language[`setting_${id}_name`];
-        this.desp = language[`setting_${id}_desp`];
+        this.name = language[`setting_${id}_name`] ?? id;
+        this.desp = language[`setting_${id}_desp`] ?? id + "_desp";
         this.type = type;
         this.limit = limit;
         if (value) {
             this.value = value;
         }else{
             this.value = g_setting[this.simpId];
+        }
+        if (typeof this.value  === 'function') {
+            this.onClick = this.value;
         }
     }
 }
@@ -348,6 +355,35 @@ async function mainEventBusHander(detail) {
     }
     debugPush("正确Protyle", protyle);
     await main(protyle);
+    // 处理插件的bug
+    function fixbug() {
+        const docId = protyle.block.rootID;
+        if (window.siyuan.storage["local-fileposition"] && window.siyuan.storage["local-fileposition"][docId]) {
+            if (window.siyuan.storage["local-fileposition"][docId]["zoomInId"] === docId) {
+                if (g_setting.autoFixFocusError && !g_tryFixErrorDoc[docId]) {
+                    siyuan.showMessage("Error 发现由于插件导致的 聚焦位置为全文档 错误，正在自动处理；若文档未自动关闭，或文档重开后问题依旧，请手动处理或升级至思源最新版本：（通过点击块面包屑的任意块，然后点击退出聚焦修复此问题）--- 消息来自插件fakeDocBreadcrumb", 0);
+                    let exitFocusBtn = protyle.element.querySelector(".protyle-breadcrumb__icon.ariaLabel");
+                    logPush("aaa", protyle.element.querySelector(".protyle-breadcrumb__icon.ariaLabel"));
+                    logPush("bbb", protyle.element.querySelector(".protyle-breadcrumb > .protyle-breadcrumb__bar"));
+                    logPush("ccc", protyle.element.querySelector(".protyle-breadcrumb > .protyle-breadcrumb__bar").lastElementChild)
+                    let lastBreadItem = protyle.element.querySelector(".protyle-breadcrumb > .protyle-breadcrumb__bar").lastElementChild;
+                    if (lastBreadItem) {
+                        lastBreadItem.click();
+                        if (exitFocusBtn) {
+                            exitFocusBtn.click();
+                            removeCurrentTabF(docId);
+                            openRefLinkByAPI({paramDocId: docId});
+                            g_tryFixErrorDoc[docId] = true;
+                        }
+                    }
+                } else {
+                    siyuan.showMessage("Error 发现由于插件导致的 聚焦位置为全文档 错误，您可以通过点击块面包屑的任意块，然后点击退出聚焦修复此问题。或在插件设置中启用打开文档时自动修复");
+                }
+                
+            }
+        }
+    }
+    fixbug();
 }
 
 
@@ -1151,6 +1187,10 @@ function removeMouseKeyboardListener() {
     window.document.removeEventListener("keydown", hideDocBreadcrumb, true);
 }
 
+function showSolveProblemDialog() {
+    
+}
+
 function setStyle() {
     // let contentElem = window.top.document.querySelector(`.fn__flex-1.protyle .protyle-content`);
     // let contentPaddingTop = parseFloat(window.getComputedStyle(contentElem)?.getPropertyValue("padding-top")?.replace("px")??30);
@@ -1744,122 +1784,144 @@ let zh_CN = {
 }
 
 let language = zh_CN;
-
 /**
- * 由需要的设置项生成设置页面
- * @param {*} settingObject 
+ * 根据设置对象数组，使用 HTMLElement 创建设置面板
+ * @param {Array<object>} settingObjectArray - 设置项对象的数组。
+ * @param {object} [language={}] - (可选) 语言包对象，用于国际化。
+ * @returns {DocumentFragment} - 包含所有设置项 DOM 元素的文档片段。
  */
-function generateSettingPanelHTML(settingObjectArray) {
-    let resultHTML = "";
-    for (let oneSettingProperty of settingObjectArray) {
-        let inputElemStr = "";
-        oneSettingProperty.desp = oneSettingProperty.desp?.replace(new RegExp("<code>", "g"), "<code class='fn__code'>");
-        if (oneSettingProperty.name.includes("🧪")) {
-            oneSettingProperty.desp = language["setting_experimental"] + oneSettingProperty.desp;
-        }
-        const tempElem = document.createElement("label");
-        tempElem.classList.add("fn__flex", "b3-label");
-        const inLabelDiv = document.createElement("div");
-        inLabelDiv.classList.add("fn__flex-1");
-        inLabelDiv.innerText = oneSettingProperty.name;
+function generateSettingPanel(settingObjectArray, language = {}) {
+    // 使用 DocumentFragment 可以一次性将所有元素添加到 DOM，效率更高
+    const fragment = document.createDocumentFragment();
 
-        const descriptionElement = document.createElement('div');
-        descriptionElement.classList.add('b3-label__text');
-        descriptionElement.textContent = oneSettingProperty.desp ?? "";
-        inLabelDiv.appendChild(descriptionElement);
+    for (const oneSettingProperty of settingObjectArray) {
+        // 1. 创建每个设置项的根容器 <label>
+        const labelContainer = document.createElement("label");
         
-        let temp = `
-        <label class="fn__flex b3-label">
-            <div class="fn__flex-1">
-                ${oneSettingProperty.name}
-                <div class="b3-label__text">${oneSettingProperty.desp??""}</div>
-            </div>
-            <span class="fn__space"></span>
-            *#*##*#*
-        </label>
-        `;
+        // 根据类型为容器设置基础 class
+        if (oneSettingProperty.type === "TEXTAREA") {
+            labelContainer.className = "b3-label fn__flex";
+        } else {
+            labelContainer.className = "fn__flex b3-label";
+            if (oneSettingProperty.type === "TEXT") {
+                labelContainer.classList.add("config__item");
+            }
+        }
+
+        // 2. 创建左侧的标题和描述区域
+        const infoDiv = document.createElement("div");
+        infoDiv.className = "fn__flex-1";
+
+        // 处理标题文本
+        infoDiv.appendChild(document.createTextNode(oneSettingProperty.name));
+
+        // 处理描述文本（支持 HTML）
+        let despHTML = oneSettingProperty.desp ?? "";
+        if (oneSettingProperty.name.includes("🧪")) {
+            const experimentalText = language["setting_experimental"] || "（实验性功能）";
+            despHTML = experimentalText + despHTML;
+        }
+
+        if (despHTML) {
+            const descriptionElement = document.createElement('div');
+            descriptionElement.className = 'b3-label__text';
+            // 替换 <code> 为带 class 的版本以应用样式
+            despHTML = despHTML.replace(/<code>/g, "<code class='fn__code'>");
+            descriptionElement.innerHTML = despHTML;
+            infoDiv.appendChild(descriptionElement);
+        }
+
+        labelContainer.appendChild(infoDiv);
+
+        // 3. 根据类型创建右侧的交互控件
+        let controlElement = null;
+
         switch (oneSettingProperty.type) {
             case "NUMBER": {
-                let min = oneSettingProperty.limit[0];
-                let max = oneSettingProperty.limit[1];
-                inputElemStr = `<input 
-                    class="b3-text-field fn__flex-center fn__size200" 
-                    id="${oneSettingProperty.id}" 
-                    type="number" 
-                    name="${oneSettingProperty.simpId}"
-                    ${min == null || min == undefined ? "":"min=\"" + min + "\""} 
-                    ${max == null || max == undefined ? "":"max=\"" + max + "\""} 
-                    value="${oneSettingProperty.value}">`;
+                controlElement = document.createElement("input");
+                controlElement.className = "b3-text-field fn__flex-center fn__size200";
+                controlElement.type = "number";
+                const [min, max] = oneSettingProperty.limit || [null, null];
+                if (min !== null) controlElement.min = min;
+                if (max !== null) controlElement.max = max;
+                controlElement.value = oneSettingProperty.value;
                 break;
             }
             case "SELECT": {
-
-                let optionStr = "";
-                for (let option of oneSettingProperty.limit) {
-                    let optionName = option.name;
-                    if (!optionName) {
-                        optionName = language[`setting_${oneSettingProperty.simpId}_option_${option.value}`];
+                controlElement = document.createElement("select");
+                controlElement.className = "b3-select fn__flex-center fn__size200";
+                
+                oneSettingProperty.limit.forEach(option => {
+                    const optionElement = document.createElement("option");
+                    optionElement.value = option.value;
+                    let optionName = option.name || language[`setting_${oneSettingProperty.simpId}_option_${option.value}`] || option.value;
+                    optionElement.textContent = optionName;
+                    if (option.value == oneSettingProperty.value) {
+                        optionElement.selected = true;
                     }
-                    optionStr += `<option value="${option.value}" 
-                    ${option.value == oneSettingProperty.value ? "selected":""}>
-                        ${optionName}
-                    </option>`;
-                }
-                inputElemStr = `<select 
-                    id="${oneSettingProperty.id}" 
-                    name="${oneSettingProperty.simpId}"
-                    class="b3-select fn__flex-center fn__size200">
-                        ${optionStr}
-                    </select>`;
+                    controlElement.appendChild(optionElement);
+                });
                 break;
             }
             case "TEXT": {
-                inputElemStr = `<input class="b3-text-field fn__flex-center fn__size200" id="${oneSettingProperty.id}" name="${oneSettingProperty.simpId}" value="${oneSettingProperty.value}"></input>`;
-                temp = `
-                <label class="fn__flex b3-label config__item">
-                    <div class="fn__flex-1">
-                        ${oneSettingProperty.name}
-                        <div class="b3-label__text">${oneSettingProperty.desp??""}</div>
-                    </div>
-                    *#*##*#*
-                </label>`
+                controlElement = document.createElement("input");
+                controlElement.className = "b3-text-field fn__flex-center fn__size200";
+                controlElement.type = "text";
+                controlElement.value = oneSettingProperty.value;
                 break;
             }
             case "SWITCH": {
-                inputElemStr = `<input 
-                class="b3-switch fn__flex-center"
-                name="${oneSettingProperty.simpId}"
-                id="${oneSettingProperty.id}" type="checkbox" 
-                ${oneSettingProperty.value?"checked=\"\"":""}></input>
-                `;
+                controlElement = document.createElement("input");
+                controlElement.className = "b3-switch fn__flex-center";
+                controlElement.type = "checkbox";
+                controlElement.checked = !!oneSettingProperty.value;
                 break;
             }
             case "TEXTAREA": {
-                inputElemStr = `<textarea 
-                name="${oneSettingProperty.simpId}"
-                class="b3-text-field fn__block" 
-                id="${oneSettingProperty.id}">${oneSettingProperty.value}</textarea>`;
-                temp = `
-                <label class="b3-label fn__flex">
-                    <div class="fn__flex-1">
-                        ${oneSettingProperty.name}
-                        <div class="b3-label__text">${oneSettingProperty.desp??""}</div>
-                        <div class="fn__hr"></div>
-                        *#*##*#*
-                    </div>
-                </label>`
+                // TEXTAREA 结构特殊，控件在左侧区域的下方
+                infoDiv.appendChild(document.createElement("div")).className = "fn__hr";
+                controlElement = document.createElement("textarea");
+                controlElement.className = "b3-text-field fn__block";
+                controlElement.value = oneSettingProperty.value;
+                infoDiv.appendChild(controlElement);
+                controlElement = null; // 标记为 null，防止下面重复添加
+                break;
+            }
+            case "BUTTON": { // ✨ 新增对 BUTTON 的支持
+                controlElement = document.createElement("button");
+                controlElement.className = "b3-button b3-button--outline fn__flex-center";
+                controlElement.type = "button";
+                // 按钮文本可由 settingObject 的 `buttonText` 属性指定
+                controlElement.textContent = oneSettingProperty.buttonText || "执行操作";
+                // 可以从 settingObject 传入一个 onClick 回调函数
+                if (typeof oneSettingProperty.onClick === 'function') {
+                    controlElement.addEventListener('click', oneSettingProperty.onClick);
+                }
                 break;
             }
             case "HINT": {
-                inputElemStr = ``;
+                // HINT 类型没有交互控件
                 break;
             }
         }
-        
-        resultHTML += temp.replace("*#*##*#*", inputElemStr);
+
+        // 4. 如果存在交互控件，则将其添加到容器中
+        if (controlElement) {
+            // 为控件设置通用属性
+            if (oneSettingProperty.id) controlElement.id = oneSettingProperty.id;
+            if (oneSettingProperty.simpId) controlElement.name = oneSettingProperty.simpId;
+
+            // 添加一个间隔元素
+            labelContainer.appendChild(document.createElement("span")).className = "fn__space";
+            // 将控件添加到容器
+            labelContainer.appendChild(controlElement);
+        }
+
+        // 5. 将构建好的整个设置项添加到文档片段中
+        fragment.appendChild(labelContainer);
     }
-    // console.log(resultHTML);
-    return resultHTML;
+
+    return fragment;
 }
 
 /**
