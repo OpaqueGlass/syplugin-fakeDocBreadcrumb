@@ -52,6 +52,8 @@
     "batchFixStart": "开始尝试自动修复。期间插件将自动打开文档。",
     "onlyOneRunning": "同时只能有一个正在运行的修复",
 
+    "nothingToDisplay": "没有可以显示的层级",
+
     "conflict_plugin_oneline_breadcrumb": "检测到冲突插件（占用面包屑下方一行），建议启用文档面包屑插件的“🧪与块面包屑在同一行显示”功能",
 
     "setting_experimental": "（实验性功能，不稳定，可能随时被移除）",

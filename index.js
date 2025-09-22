@@ -396,6 +396,8 @@ async function mainEventBusHander(detail) {
         }
     }
     fixbug();
+    // 处理menu
+    addBlockBdMenuListener(protyle.element, protyle.block.rootID)
 }
 
 
@@ -1199,10 +1201,6 @@ function removeMouseKeyboardListener() {
     window.document.removeEventListener("keydown", hideDocBreadcrumb, true);
 }
 
-function showSolveProblemDialog() {
-    
-}
-
 function setStyle() {
     // let contentElem = window.top.document.querySelector(`.fn__flex-1.protyle .protyle-content`);
     // let contentPaddingTop = parseFloat(window.getComputedStyle(contentElem)?.getPropertyValue("padding-top")?.replace("px")??30);
@@ -1294,6 +1292,19 @@ function setStyle() {
     svg.og-fake-doc-breadcrumb-arrow.protyle-breadcrumb__arrow {
         border: none;
         transform: none;
+    }
+    /*块面包屑*/
+    .protyle-breadcrumb__bar[data-og-fdb-added-el] .protyle-breadcrumb__arrow {
+        cursor: pointer;
+    }
+    .protyle-breadcrumb__bar[data-og-fdb-added-el] .protyle-breadcrumb__arrow:hover {
+        color: var(--b3-theme-on-background);
+        background-color: var(--b3-list-hover);
+    }
+
+    .protyle-breadcrumb__bar[data-og-fdb-added-el] .protyle-breadcrumb__arrow:hover > * {
+        color: var(--b3-menu-highlight-color);
+        background-color: var(--b3-menu-highlight-background);
     }
 
     .og-fake-doc-breadcrumb-arrow-span:hover {
@@ -1482,13 +1493,15 @@ async function parseBody(response) {
     return r.code === 0 ? r.data : null;
 }
 
-async function pushMsg(msg, timeout = 4500) {
-    let url = '/api/notification/pushMsg';
-    let data = {
-        "msg": msg,
-        "timeout": timeout
+async function getDocOutline(docId) {
+    let url = "/api/outline/getDocOutline";
+    let data = {"id": docId};
+    let response = await request(url, data);
+    if (response.code == 0){
+        return response.data;
+    }else{
+        return null;
     }
-    return parseBody(request(url, data));
 }
 
 async function getDocInfo(docId) {
@@ -1604,71 +1617,163 @@ async function tryToFixAllError() {
     
 }
 
-/**
- * 在点击<span data-type="block-ref">时打开思源块/文档
- * 为引入本项目，和原代码相比有更改
- * @refer https://github.com/leolee9086/cc-template/blob/6909dac169e720d3354d77685d6cc705b1ae95be/baselib/src/commonFunctionsForSiyuan.js#L118-L141
- * @license 木兰宽松许可证
- * @param {点击事件} event
- * @param {string} docId，此项仅在event对应的发起Elem上找不到data node id的情况下使用
- * @param {keyParam} keyParam event的Key，主要是ctrlKey shiftKey等，此项仅在event无效时使用
- * @param {protyle} protyleElem 如果不为空打开文档点击事件将在该Elem上发起
- * @param {boolean} openInFocus 在当前聚焦的窗口中打开，给定此项为true，则优于protyle选项生效
- * @deprecated 如非使用”在当前聚焦的窗口中打开“功能，请切换到openRefLinkByAPI
- */
-function openRefLink(event, paramId = "", keyParam = undefined, protyleElem = undefined, openInFocus = !g_setting.preferOpenInCurrentSplit){
-    let 主界面= window.parent.document
-    let id;
-    if (event && event.currentTarget && event.currentTarget.getAttribute("data-node-id")) {
-        id = event.currentTarget.getAttribute("data-node-id");
-    } else if (event && event.currentTarget && event.currentTarget.getAttribute("data-og-doc-node-id")){
-        id = event.currentTarget.getAttribute("data-og-doc-node-id");
-    }else{
-        id = paramId;
+async function addBlockBdMenuListener(protyleElem, docId) {
+    const breadcrumbBar = protyleElem.querySelector('.protyle-breadcrumb > .protyle-breadcrumb__bar');
+    if (breadcrumbBar.dataset["ogFdbAddedEl"]) {
+        return;
     }
-    // 处理笔记本等无法跳转的情况
-    if (!isValidStr(id)) {return;}
-    event?.preventDefault();
-    event?.stopPropagation();
-    debugPush("openRefLinkEvent", event);
-    let 虚拟链接 =  主界面.createElement("span")
-    虚拟链接.setAttribute("data-type","a")
-    虚拟链接.setAttribute("data-href", "siyuan://blocks/" + id)
-    虚拟链接.style.display = "none";//不显示虚拟链接，防止视觉干扰
-    let 临时目标 = null;
-    // 如果提供了目标protyle，在其中插入
-    if (protyleElem && !openInFocus) {
-        临时目标 = protyleElem.querySelector(".protyle-wysiwyg div[data-node-id] div[contenteditable]") ?? protyleElem;
-        debugPush("openRefLink使用提供窗口", 临时目标);
-    }
-    debugPush("openInFocus?", openInFocus);
-    if (openInFocus) {
-        // 先确定Tab
-        const dataId = 主界面.querySelector(".layout__wnd--active .layout-tab-bar .item--focus")?.getAttribute("data-id");
-        debugPush("openRefLink尝试使用聚焦窗口", dataId);
-        // 再确定Protyle
-        if (isValidStr(dataId)) {
-            临时目标 = window.document.querySelector(`.fn__flex-1.protyle[data-id='${dataId}']
-            .protyle-wysiwyg div[data-node-id] div[contenteditable]`);
-            debugPush("openRefLink使用聚焦窗口", 临时目标);
+    breadcrumbBar.dataset["ogFdbAddedEl"] = "true";
+    breadcrumbBar.addEventListener('click', async (event) => {
+        // 使用 .closest() 判断点击的是否是箭头或其内部元素
+        const arrowElement = event.target.closest('.protyle-breadcrumb__arrow');
+        if (!arrowElement) {
+            return;
         }
-    }
-    if (!isValidStr(临时目标)) {
-        临时目标 = 主界面.querySelector(".protyle-wysiwyg div[data-node-id] div[contenteditable]");
-        debugPush("openRefLink未能找到指定窗口，更改为原状态");
-    }
-    临时目标.appendChild(虚拟链接);
-    let clickEvent = new MouseEvent("click", {
-        ctrlKey: event?.ctrlKey ?? keyParam?.ctrlKey,
-        shiftKey: event?.shiftKey ?? keyParam?.shiftKey,
-        altKey: event?.altKey ?? keyParam?.altKey,
-        metaKey: event?.metaKey ?? keyParam?.metaKey,
-        bubbles: true
+        // 获取箭头左侧的面包屑项目
+        const precedingItem = arrowElement.previousElementSibling;
+        if (!precedingItem || !precedingItem.classList.contains('protyle-breadcrumb__item')) {
+            warnPush("未找到箭头左侧的面包屑项目。");
+            return;
+        }
+        const afterItem = arrowElement.nextElementSibling;
+        let nextNodeId = "";
+        if (afterItem && precedingItem.classList.contains('protyle-breadcrumb__item')) {
+            nextNodeId = afterItem.dataset.nodeId;
+        }
+        // 提取 Node ID 和图标信息
+        const nodeId = precedingItem.dataset.nodeId;
+        const iconUseElement = precedingItem.querySelector('svg.popover__block use');
+        
+        if (!nodeId || !iconUseElement) {
+            warnPush("无法从面包屑项目中提取 node-id 或 icon。");
+            return;
+        }
+        event.stopImmediatePropagation();
+        event.stopPropagation();
+        event.preventDefault();
+        const iconHref = iconUseElement.getAttributeNS('http://www.w3.org/1999/xlink', 'href'); 
+        
+        logPush(`点击了 ID: ${nodeId} (${iconHref}) 旁边的箭头`);
+        const menuId = "bid_" + nodeId;
+        if (!checkAndCloseLastMenu(menuId)) {
+            return;
+        }
+        try {
+            // 获取文档大纲
+            const outlineData = await getDocOutline(docId);
+
+            let menuItems = [];
+
+            // 根据图标类型来决定菜单内容
+            if (iconHref === '#iconFile') {
+                // 如果是文档图标，显示所有顶级标题
+                logPush("目标是文档根节点，筛选所有顶级标题 (depth: 0)...");
+                menuItems = outlineData.filter(item => item.depth === 0);
+            } else if (iconHref.startsWith('#iconH')) {
+                // 如果是标题图标 (H1-H6)，显示其下的直接子标题
+                logPush(`目标是标题节点，查找 ID: ${nodeId} 的子标题...`);
+                // 递归查找指定 ID 的标题及其子项
+                function findHeadingById(items, targetId) {
+                    for (const item of items) {
+                        if (item.id === targetId) {
+                            return item;
+                        }
+                        // 顶层标题
+                        if (item.blocks && item.blocks.length > 0) {
+                            const found = findHeadingById(item.blocks, targetId);
+                            if (found) return found;
+                        }
+                        // 深层标题
+                        if (item.children && item.children.length > 0) {
+                            const found = findHeadingById(item.children, targetId);
+                            if (found) return found;
+                        }
+                    }
+                    return null;
+                }
+                
+                const parentHeading = findHeadingById(outlineData, nodeId);
+                if (parentHeading) {
+                    // 优先使用 blocks，如果没有则使用 children
+                    menuItems = parentHeading.blocks || parentHeading.children || [];
+                } else {
+                    logPush(`标题 ${nodeId} 没有找到或没有子标题。`);
+                }
+            } else {
+                    logPush(`点击了非文档或标题图标 (${iconHref}) 旁的箭头，不作处理。`);
+                    siyuan.showMessage(language["nothingToDisplay"] + "--- fakeDocBreadcrumb");
+                    return;
+            }
+            
+            // 递归构建菜单项的函数
+            function buildMenuItems(items) {
+                return items.map(item => {
+                    const menuItem = {
+                        id: item.id,
+                        label: `<span class="${CONSTANTS.MENU_ITEM_CLASS_NAME}" 
+                            data-og-block-node-id="${item.id}">
+                            ${item.name || item.content}
+                        </span>`,
+                        current: nextNodeId === item.id,
+                        icon: "icon" + item.subType.toUpperCase(),
+                        click: (htmlElement, event) => {
+                            const blocId = htmlElement.querySelector(".og-fake-doc-breadcrumb-menu-item-container")?.getAttribute("data-og-block-node-id");
+                            event.preventDefault();
+                            event.stopImmediatePropagation();
+                            event.stopPropagation();
+                            if (blocId) {
+                                siyuan.openTab({
+                                    app: getPluginInstance().app,
+                                    doc: {
+                                        id: blocId,
+                                        action: ["cb-get-focus", "cb-get-scroll"],
+                                        keepCursor: true,
+                                    }
+                                });
+                            }
+                        }
+                    };
+                    
+                    const childItems = item.blocks || item.children;
+                    if (childItems && childItems.length > 0) {
+                        menuItem.type = "submenu";
+                        menuItem.submenu = buildMenuItems(childItems);
+                    }
+                    
+                    return menuItem;
+                });
+            }
+            
+            // 打开菜单
+            let rect = arrowElement.getBoundingClientRect();
+            if (menuItems.length > 0) {
+                const tempMenu = new siyuan.Menu("og-fdb-relative-menu");
+                const menuItemsToAdd = buildMenuItems(menuItems);
+                
+                menuItemsToAdd.forEach(menuItem => {
+                    tempMenu.addItem(menuItem);
+                });
+                
+                // 菜单展示位置调整
+                if (menuItems.length * 30 > (window.innerHeight - rect.bottom) * 0.7) {
+                    tempMenu.open({x: rect.right, y: rect.top, isLeft: false});
+                } else {
+                    tempMenu.open({x: rect.left, y: rect.bottom, isLeft: false});
+                }
+                
+                saveLastMenu(tempMenu, menuId);
+            } else {
+                logPush("没有可供显示的菜单项。");
+                siyuan.showMessage(language["nothingToDisplay"] + "--- fakeDocBreadcrumb");
+            }
+
+        } catch (error) {
+            errorPush("获取或处理大纲数据时出错:", error);
+        }
     });
-    window.getSelection()?.removeAllRanges();
-    虚拟链接.dispatchEvent(clickEvent);
-    虚拟链接.remove();
 }
+
+
 
 function getPluginInstance() {
     return g_pluginInstance;
@@ -1714,14 +1819,16 @@ let lastClickTime_openRefLinkByAPI = 0;
  */
 function openRefLinkByAPI({mouseEvent, paramDocId = "", keyParam = {}, openInFocus = undefined, removeCurrentTab = undefined, autoRemoveJudgeMiliseconds = 0, preventDefault = false}) {
     let docId;
-    if (mouseEvent && mouseEvent.currentTarget?.getAttribute("data-node-id")) {
-        docId = mouseEvent.currentTarget?.getAttribute("data-node-id");
-    } else if (mouseEvent && mouseEvent.currentTarget?.getAttribute("data-id")) {
-        docId = (mouseEvent.currentTarget)?.getAttribute("data-id");
-    } else if (mouseEvent && mouseEvent && mouseEvent.currentTarget?.getAttribute("data-og-doc-node-id")) {
-        docId = mouseEvent.currentTarget?.getAttribute("data-og-doc-node-id");
-    } else {
+    if (isValidStr(paramDocId)) {
         docId = paramDocId;
+    } else {
+        if (mouseEvent && mouseEvent.currentTarget?.getAttribute("data-node-id")) {
+            docId = mouseEvent.currentTarget?.getAttribute("data-node-id");
+        } else if (mouseEvent && mouseEvent.currentTarget?.getAttribute("data-id")) {
+            docId = (mouseEvent.currentTarget)?.getAttribute("data-id");
+        } else if (mouseEvent && mouseEvent && mouseEvent.currentTarget?.getAttribute("data-og-doc-node-id")) {
+            docId = mouseEvent.currentTarget?.getAttribute("data-og-doc-node-id");
+        }
     }
     // 处理笔记本等无法跳转的情况
     if (!isValidStr(docId)) {

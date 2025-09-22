@@ -60,6 +60,7 @@
 
     "loading": "Loading...",
     "no_doc": "No Document",
+    "nothingToDisplay": "Nothing to show",
 
     "root": "/",
     "workspace": "Workspace",
