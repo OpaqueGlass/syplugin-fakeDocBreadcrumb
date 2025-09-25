@@ -2,6 +2,13 @@
  * 
  */
 const siyuan = require('siyuan');
+// 测试中……
+// /** @type {import('./utils.js').Utils} */
+// let utils_;
+// const _utils = import('/plugins/syplugin-fakeDocBreadcrumb/utils.js').then(res=>{
+//     console.error("hello", res);
+//     utils_ = res.default;
+// });
 
 /**
  * 全局变量
@@ -397,7 +404,7 @@ async function mainEventBusHander(detail) {
     }
     fixbug();
     // 处理menu
-    addBlockBdMenuListener(protyle.element, protyle.block.rootID)
+    addBlockBdMenuListener(protyle.element, protyle.block.rootID, protyle);
 }
 
 
@@ -1617,7 +1624,8 @@ async function tryToFixAllError() {
     
 }
 
-async function addBlockBdMenuListener(protyleElem, docId) {
+async function addBlockBdMenuListener(protyleElem, docId, protyle) {
+    // 限制范围，避免影响插件插入的面包屑
     const breadcrumbBar = protyleElem.querySelector('.protyle-breadcrumb > .protyle-breadcrumb__bar');
     if (breadcrumbBar.dataset["ogFdbAddedEl"]) {
         return;
@@ -1632,7 +1640,7 @@ async function addBlockBdMenuListener(protyleElem, docId) {
         // 获取箭头左侧的面包屑项目
         const precedingItem = arrowElement.previousElementSibling;
         if (!precedingItem || !precedingItem.classList.contains('protyle-breadcrumb__item')) {
-            warnPush("未找到箭头左侧的面包屑项目。");
+            logPush("未找到箭头左侧的面包屑项目。");
             return;
         }
         const afterItem = arrowElement.nextElementSibling;
@@ -1645,7 +1653,7 @@ async function addBlockBdMenuListener(protyleElem, docId) {
         const iconUseElement = precedingItem.querySelector('svg.popover__block use');
         
         if (!nodeId || !iconUseElement) {
-            warnPush("无法从面包屑项目中提取 node-id 或 icon。");
+            logPush("无法从面包屑项目中提取 node-id 或 icon。");
             return;
         }
         event.stopImmediatePropagation();
@@ -1728,6 +1736,10 @@ async function addBlockBdMenuListener(protyleElem, docId) {
                                         id: blocId,
                                         action: ["cb-get-focus", "cb-get-scroll"],
                                         keepCursor: true,
+                                    },
+                                    afterOpen: ()=>{
+                                        // 更新breadcrumb
+                                        protyle?.breadcrumb?.render(protyle);
                                     }
                                 });
                             }
@@ -1872,7 +1884,8 @@ function openRefLinkByAPI({mouseEvent, paramDocId = "", keyParam = {}, openInFoc
         app: getPluginInstance().app,
         doc: {
             id: docId,
-            zoomIn: openInFocus
+            zoomIn: openInFocus,
+            action: [siyuan.Constants.CB_GET_SCROLL],
         },
         position: positionKey,
         keepCursor: isEventCtrlKey(keyParam) ? true : undefined,
@@ -1950,7 +1963,7 @@ let language = zh_CN;
  * @param {object} [language={}] - (可选) 语言包对象，用于国际化。
  * @returns {DocumentFragment} - 包含所有设置项 DOM 元素的文档片段。
  */
-function generateSettingPanel(settingObjectArray, language = {}) {
+function generateSettingPanel(settingObjectArray) {
     // 使用 DocumentFragment 可以一次性将所有元素添加到 DOM，效率更高
     const fragment = document.createDocumentFragment();
 
@@ -2011,7 +2024,7 @@ function generateSettingPanel(settingObjectArray, language = {}) {
                 oneSettingProperty.limit.forEach(option => {
                     const optionElement = document.createElement("option");
                     optionElement.value = option.value;
-                    let optionName = option.name || language[`setting_${oneSettingProperty.simpId}_option_${option.value}`] || option.value;
+                    let optionName = language[`setting_${oneSettingProperty.simpId}_option_${option.value}`] || option.value;
                     optionElement.textContent = optionName;
                     if (option.value == oneSettingProperty.value) {
                         optionElement.selected = true;
