@@ -1687,7 +1687,11 @@ async function addBlockBdMenuListener(protyleElem, docId, protyle) {
             const outlineData = await getDocOutline(docId);
 
             let menuItems = [];
-
+            if (outlineData == null) {
+                logPush("获取大纲数据失败或文档无大纲。");
+                siyuan.showMessage(language["nothingToDisplay"] + "--- fakeDocBreadcrumb");
+                return;
+            }
             // 根据图标类型来决定菜单内容
             if (iconHref === '#iconFile') {
                 // 如果是文档图标，显示所有顶级标题
