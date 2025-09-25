@@ -167,7 +167,7 @@ class FakeDocBreadcrumb extends siyuan.Plugin {
             </div>
             `,
             "width": isMobile() ? "92vw":"1040px",
-            "height": isMobile() ? "50vw":"80vh",
+            "height": isMobile() ? "70vh":"80vh",
         });
         debugPush("dialog", settingDialog);
         const actionButtons = settingDialog.element.querySelectorAll(`#${CONSTANTS.PLUGIN_NAME}-form-action button`);
@@ -1354,6 +1354,15 @@ function setStyle() {
 function styleEscape(str) {
     return str.replace(new RegExp("<[^<]*style[^>]*>", "g"), "");
 }
+function escapeHTML(str) {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
 
 function removeStyle() {
     document.getElementById(CONSTANTS.STYLE_ID)?.remove();
@@ -1624,6 +1633,13 @@ async function tryToFixAllError() {
     
 }
 
+function stripHTML(input) {
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(input, "text/html");
+  return doc.documentElement.textContent || "";
+}
+
+
 async function addBlockBdMenuListener(protyleElem, docId, protyle) {
     // 限制范围，避免影响插件插入的面包屑
     const breadcrumbBar = protyleElem.querySelector('.protyle-breadcrumb > .protyle-breadcrumb__bar');
@@ -1716,11 +1732,13 @@ async function addBlockBdMenuListener(protyleElem, docId, protyle) {
             // 递归构建菜单项的函数
             function buildMenuItems(items) {
                 return items.map(item => {
+                    const fullName = escapeHTML(stripHTML(item.name || item.content || ""));
+                    const trimedName = fullName.length > g_setting.nameMaxLength ? fullName.substring(0, g_setting.nameMaxLength) + "..." : fullName;
                     const menuItem = {
                         id: item.id,
                         label: `<span class="${CONSTANTS.MENU_ITEM_CLASS_NAME}" 
-                            data-og-block-node-id="${item.id}">
-                            ${item.name || item.content}
+                            data-og-block-node-id="${item.id}" title="${fullName}">
+                            ${trimedName}
                         </span>`,
                         current: nextNodeId === item.id,
                         icon: "icon" + item.subType.toUpperCase(),
