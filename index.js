@@ -1736,7 +1736,7 @@ async function addBlockBdMenuListener(protyleElem, docId, protyle) {
             // 递归构建菜单项的函数
             function buildMenuItems(items) {
                 return items.map(item => {
-                    const fullName = escapeHTML(stripHTML(item.name || item.content || ""));
+                    const fullName = escapeHTML(stripHTML(item.name || item.content || "N/A"));
                     const trimedName = fullName.length > g_setting.nameMaxLength ? fullName.substring(0, g_setting.nameMaxLength) + "..." : fullName;
                     const menuItem = {
                         id: item.id,
