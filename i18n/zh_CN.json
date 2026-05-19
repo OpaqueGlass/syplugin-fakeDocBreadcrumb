@@ -35,6 +35,8 @@
     "setting_menuExtendSubDocDepth_desp": "最小值1，最大值7",
     "setting_swapClickFunction_name": "🧪交换左右键点击功能",
     "setting_swapClickFunction_desp": "启用后，左键点击将展开下层文档，右键点击将打开文档",
+    "setting_showAdjacentDocButton_name": "显示上一篇/下一篇按钮",
+    "setting_showAdjacentDocButton_desp": "在文档面包屑右侧显示上一篇文档和下一篇文档按钮；仅在当前文档的同级文档之间跳转。",
     "setting_icon_name": "文档图标",
     "setting_icon_desp": "控制子文档菜单、面包屑路径中文档图标显示与否",
     "setting_icon_option_0": "不显示",
@@ -53,6 +55,8 @@
     "onlyOneRunning": "同时只能有一个正在运行的修复",
 
     "nothingToDisplay": "没有可以显示的层级",
+    "previous_doc": "上一篇文档",
+    "next_doc": "下一篇文档",
 
     "conflict_plugin_oneline_breadcrumb": "检测到冲突插件（占用面包屑下方一行），建议启用文档面包屑插件的“🧪与块面包屑在同一行显示”功能",
 

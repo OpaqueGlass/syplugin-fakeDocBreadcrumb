@@ -40,6 +40,8 @@
     "setting_menuExtendSubDocDepth_desp": "Set the number of sub-menu levels to display in the breadcrumb menu.",
     "setting_swapClickFunction_name": "🧪Swap left and right key click functions for document names",
     "setting_swapClickFunction_desp": "When enabled, left-click will expand the underlying document menu, right-click will open the document",
+    "setting_showAdjacentDocButton_name": "Show previous/next document buttons",
+    "setting_showAdjacentDocButton_desp": "Show previous and next document buttons on the right side of the document breadcrumb. Navigation only moves between sibling documents.",
 
     "conflict_plugin_oneline_breadcrumb": "Detected conflicting plugins (occupying the line below breadcrumbs). The fakeDocBreadcrumb plugin suggest enable the \"🧪 Display the document breadcrumb on the same line as the block breadcrumb\" feature.",
 
@@ -61,6 +63,8 @@
     "loading": "Loading...",
     "no_doc": "No Document",
     "nothingToDisplay": "Nothing to show",
+    "previous_doc": "Previous document",
+    "next_doc": "Next document",
 
     "root": "/",
     "workspace": "Workspace",
