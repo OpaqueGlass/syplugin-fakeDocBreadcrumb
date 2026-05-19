@@ -413,7 +413,7 @@ async function mainEventBusHander(detail) {
 
 async function eventBusHandler(detail) {
     // console.log(detail);
-    const cmdType = ["moveDoc", "rename", "removeDoc"];
+    const cmdType = ["moveDoc", "rename", "removeDoc", "filetreeSortChanged"];
     if (cmdType.indexOf(detail.detail.cmd) != -1) {
         try {
             debugPush("检查刷新中（由重命名、移动或删除触发）");
@@ -428,6 +428,7 @@ async function eventBusHandler(detail) {
                     }
                 }
             }
+            g_adjacentDocCache = {};
         }catch(err) {
             errorPush(err);
         }
@@ -707,6 +708,7 @@ async function generateElement(pathObjects, docId, protyle) {
     }
 }
 
+// [START] 相邻文档导航相关
 async function generateAdjacentDocNav(pathObjects) {
     const navElement = document.createElement("span");
     navElement.className = "og-fdb-doc-nav";
@@ -718,7 +720,7 @@ async function generateAdjacentDocNav(pathObjects) {
 
 function createAdjacentDocButton(direction, doc) {
     const isPrevious = direction === "previous";
-    const label = isPrevious ? (language["previous_doc"] ?? "上一篇文档") : (language["next_doc"] ?? "下一篇文档");
+    const label = isPrevious ? (language["previous_doc"]) : (language["next_doc"]);
     const button = document.createElement("button");
     button.type = "button";
     button.className = "og-fdb-doc-nav-button";
@@ -726,17 +728,15 @@ function createAdjacentDocButton(direction, doc) {
     let buttonText = label;
 
     if (doc?.id) {
-        const docName = getAdjacentDocName(doc);
-        const docTitle = docName || label;
-        buttonText = docTitle;
+        const docName = trimListDocsByPathAPIReturnedDocName(doc?.name ?? "");
+        const trimedDocName = trimDocName(docName, g_setting.nameMaxLength);
+        buttonText = docName;
         button.setAttribute("data-doc-id", doc.id);
-        button.setAttribute("data-og-doc-title", docTitle);
-        button.setAttribute("title", docTitle);
-        button.setAttribute("aria-label", `${label}: ${docTitle}`);
+        button.setAttribute("data-og-doc-title", docName);
+        button.setAttribute("title", `${label}: ${docName}`);
     } else {
         button.disabled = true;
         button.setAttribute("title", label);
-        button.setAttribute("aria-label", label);
     }
 
     const svgNS = "http://www.w3.org/2000/svg";
@@ -761,12 +761,11 @@ function createAdjacentDocButton(direction, doc) {
     return button;
 }
 
-function getAdjacentDocName(doc) {
-    let docName = doc?.name ?? "";
-    if (docName.endsWith(".sy")) {
-        docName = docName.substring(0, docName.length - 3);
+function trimDocName(name, maxLength) {
+    if (name.length <= maxLength) {
+        return name;
     }
-    return decodeHtmlEntities(docName);
+    return name.substring(0, g_setting.nameMaxLength) + "...";
 }
 
 async function getAdjacentDocs(pathObjects) {
@@ -778,9 +777,9 @@ async function getAdjacentDocs(pathObjects) {
         return result;
     }
     const currentDoc = pathObjects[pathObjects.length - 1];
+    const previousDoc = pathObjects[pathObjects.length - 2];
     const currentDepth = pathObjects.length - 1;
-    const cache = {};
-    const sameLevelDocs = await getAdjacentDocsByDepth(pathObjects[0], currentDepth, cache);
+    const sameLevelDocs = await getAdjacentChildDocs(previousDoc);
     const currentIndex = findAdjacentDocIndex(sameLevelDocs, currentDoc.id);
     if (currentIndex < 0) {
         return result;
@@ -790,49 +789,27 @@ async function getAdjacentDocs(pathObjects) {
     return result;
 }
 
-async function getAdjacentDocsByDepth(parentDoc, targetDepth, cache) {
-    if (targetDepth <= 0) {
-        return [];
-    }
-    const childDocs = await getAdjacentChildDocs(parentDoc, cache);
-    if (targetDepth === 1) {
-        return childDocs;
-    }
-    let result = [];
-    for (const childDoc of childDocs) {
-        if (childDoc.subFileCount === 0) {
-            continue;
-        }
-        const subDocs = await getAdjacentDocsByDepth(childDoc, targetDepth - 1, cache);
-        result = result.concat(subDocs);
-    }
-    return result;
-}
+let g_adjacentDocCache = {};
 
-async function getAdjacentChildDocs(parentDoc, cache) {
+async function getAdjacentChildDocs(parentDoc) {
     if (!parentDoc?.path || !parentDoc?.box) {
         return [];
     }
-    const cacheKey = `${parentDoc.box}:${parentDoc.path}`;
-    if (!cache[cacheKey]) {
-        const response = await listDocsByPath({
-            path: parentDoc.path,
-            notebook: parentDoc.box,
-            ignoreDocMaxNum: true,
-        });
-        cache[cacheKey] = response?.files?.map(doc => normalizeAdjacentDoc(doc, parentDoc.box)) ?? [];
+    const cacheKey = `${parentDoc.box}-${parentDoc.path}`;
+    if (g_adjacentDocCache[cacheKey] && (Date.now() - g_adjacentDocCache[cacheKey].timestamp < 3 * 60 * 1000) && g_setting.immediatelyUpdate) {
+        debugPush("使用相邻文档缓存", cacheKey);
+        return g_adjacentDocCache[cacheKey].data;
     }
-    return cache[cacheKey];
-}
-
-function normalizeAdjacentDoc(doc, notebook) {
-    if (!doc) {
-        return null;
-    }
-    return {
-        ...doc,
-        box: doc.box ?? notebook,
+    const response = await listDocsByPath({
+        path: parentDoc.path,
+        notebook: parentDoc.box,
+        ignoreDocMaxNum: true,
+    });
+    g_adjacentDocCache[cacheKey] = {
+        "data": response?.files ?? [],
+        "timestamp": Date.now(),
     };
+    return g_adjacentDocCache[cacheKey].data;
 }
 
 function findAdjacentDocIndex(docList, docId) {
@@ -1446,8 +1423,8 @@ function setStyle() {
     }
 
     .og-fake-doc-breadcrumb-arrow {
-        height: 10px;
-        width: 10px;
+        height: 14px;
+        width: 14px;
         color: var(--b3-theme-on-surface-light);
         margin: 0 4px;
         flex-shrink: 0
@@ -1500,7 +1477,7 @@ function setStyle() {
         gap: 4px;
         height: 24px;
         justify-content: center;
-        max-width: min(180px, 22vw);
+        max-width: min(180px, 12em, 22vw);
         min-width: 0;
         padding: 0 6px;
     }
@@ -1554,7 +1531,7 @@ function setStyle() {
     }
 
     .og-fake-doc-breadcrumb-ellipsis {
-        max-width: 112px;
+        max-width: min(112px, 12em, 15vw);
     }
     `;
     head.appendChild(style);
@@ -2422,7 +2399,7 @@ function isCurrentVersionLessThan(version) {
 
 function trimListDocsByPathAPIReturnedDocName(docName) {
     if (isCurrentVersionLessThan("3.6.5") && docName.endsWith(".sy")) {
-        return docName.substring(0, docName.length - 3);
+        return decodeHtmlEntities(docName.substring(0, docName.length - 3));
     } else {
         return docName;
     }
