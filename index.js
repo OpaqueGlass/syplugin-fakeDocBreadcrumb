@@ -64,6 +64,7 @@ let g_setting = {
     "menuExtendSubDocDepth": null,
     "swapClickFunction": null,
     "showRoot": null,
+    "showAdjacentDocButton": null,
 };
 let g_setting_default = {
     "nameMaxLength": 15,
@@ -84,6 +85,7 @@ let g_setting_default = {
     "menuExtendSubDocDepth": 2,
     "swapClickFunction": false,
     "showRoot": false,
+    "showAdjacentDocButton": true,
     "@version": 20250922,
     "autoFixFocusError": false,
 };
@@ -218,6 +220,7 @@ class FakeDocBreadcrumb extends siyuan.Plugin {
             new SettingProperty("immediatelyUpdate", "SWITCH", null),
             new SettingProperty("menuExtendSubDocDepth", "NUMBER", [1, 7]),
             new SettingProperty("swapClickFunction", "SWITCH", null),
+            new SettingProperty("showAdjacentDocButton", "SWITCH", null),
         ]));
 
         hello.appendChild(settingForm);
@@ -679,6 +682,9 @@ async function generateElement(pathObjects, docId, protyle) {
     barElement.classList.add("protyle-breadcrumb__bar");
     // barElement.classList.add("protyle-breadcrumb__bar--nowrap");
     barElement.innerHTML = htmlStr;
+    if (g_setting.showAdjacentDocButton) {
+        barElement.appendChild(await generateAdjacentDocNav(pathObjects));
+    }
     result.appendChild(barElement);
     result.classList.add(CONSTANTS.CONTAINER_CLASS_NAME);
     if (!g_setting.oneLineBreadcrumb) {
@@ -699,6 +705,138 @@ async function generateElement(pathObjects, docId, protyle) {
         }
         return false;
     }
+}
+
+async function generateAdjacentDocNav(pathObjects) {
+    const navElement = document.createElement("span");
+    navElement.className = "og-fdb-doc-nav";
+    const adjacentDocs = await getAdjacentDocs(pathObjects);
+    navElement.appendChild(createAdjacentDocButton("previous", adjacentDocs.previousDoc));
+    navElement.appendChild(createAdjacentDocButton("next", adjacentDocs.nextDoc));
+    return navElement;
+}
+
+function createAdjacentDocButton(direction, doc) {
+    const isPrevious = direction === "previous";
+    const label = isPrevious ? (language["previous_doc"] ?? "上一篇文档") : (language["next_doc"] ?? "下一篇文档");
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "og-fdb-doc-nav-button";
+    button.setAttribute("data-og-adjacent-direction", direction);
+    let buttonText = label;
+
+    if (doc?.id) {
+        const docName = getAdjacentDocName(doc);
+        const docTitle = docName || label;
+        buttonText = docTitle;
+        button.setAttribute("data-doc-id", doc.id);
+        button.setAttribute("data-og-doc-title", docTitle);
+        button.setAttribute("title", docTitle);
+        button.setAttribute("aria-label", `${label}: ${docTitle}`);
+    } else {
+        button.disabled = true;
+        button.setAttribute("title", label);
+        button.setAttribute("aria-label", label);
+    }
+
+    const svgNS = "http://www.w3.org/2000/svg";
+    const svg = document.createElementNS(svgNS, "svg");
+    svg.setAttribute("title", button.getAttribute("title"));
+    svg.setAttribute("aria-hidden", "true");
+    const use = document.createElementNS(svgNS, "use");
+    use.setAttributeNS("http://www.w3.org/1999/xlink", "xlink:href", "#iconRight");
+    svg.appendChild(use);
+
+    const textSpan = document.createElement("span");
+    textSpan.className = "og-fdb-doc-nav-button-text";
+    textSpan.textContent = buttonText;
+
+    if (isPrevious) {
+        button.appendChild(svg);
+        button.appendChild(textSpan);
+    } else {
+        button.appendChild(textSpan);
+        button.appendChild(svg);
+    }
+    return button;
+}
+
+function getAdjacentDocName(doc) {
+    let docName = doc?.name ?? "";
+    if (docName.endsWith(".sy")) {
+        docName = docName.substring(0, docName.length - 3);
+    }
+    return decodeHtmlEntities(docName);
+}
+
+async function getAdjacentDocs(pathObjects) {
+    const result = {
+        previousDoc: null,
+        nextDoc: null,
+    };
+    if (!Array.isArray(pathObjects) || pathObjects.length <= 1) {
+        return result;
+    }
+    const currentDoc = pathObjects[pathObjects.length - 1];
+    const currentDepth = pathObjects.length - 1;
+    const cache = {};
+    const sameLevelDocs = await getAdjacentDocsByDepth(pathObjects[0], currentDepth, cache);
+    const currentIndex = findAdjacentDocIndex(sameLevelDocs, currentDoc.id);
+    if (currentIndex < 0) {
+        return result;
+    }
+    result.previousDoc = sameLevelDocs[currentIndex - 1] ?? null;
+    result.nextDoc = sameLevelDocs[currentIndex + 1] ?? null;
+    return result;
+}
+
+async function getAdjacentDocsByDepth(parentDoc, targetDepth, cache) {
+    if (targetDepth <= 0) {
+        return [];
+    }
+    const childDocs = await getAdjacentChildDocs(parentDoc, cache);
+    if (targetDepth === 1) {
+        return childDocs;
+    }
+    let result = [];
+    for (const childDoc of childDocs) {
+        if (childDoc.subFileCount === 0) {
+            continue;
+        }
+        const subDocs = await getAdjacentDocsByDepth(childDoc, targetDepth - 1, cache);
+        result = result.concat(subDocs);
+    }
+    return result;
+}
+
+async function getAdjacentChildDocs(parentDoc, cache) {
+    if (!parentDoc?.path || !parentDoc?.box) {
+        return [];
+    }
+    const cacheKey = `${parentDoc.box}:${parentDoc.path}`;
+    if (!cache[cacheKey]) {
+        const response = await listDocsByPath({
+            path: parentDoc.path,
+            notebook: parentDoc.box,
+            ignoreDocMaxNum: true,
+        });
+        cache[cacheKey] = response?.files?.map(doc => normalizeAdjacentDoc(doc, parentDoc.box)) ?? [];
+    }
+    return cache[cacheKey];
+}
+
+function normalizeAdjacentDoc(doc, notebook) {
+    if (!doc) {
+        return null;
+    }
+    return {
+        ...doc,
+        box: doc.box ?? notebook,
+    };
+}
+
+function findAdjacentDocIndex(docList, docId) {
+    return docList.findIndex(doc => doc.id === docId);
 }
 
 function setAndApply(finalElement, docId, eventProtyle) {
@@ -771,6 +909,9 @@ function setAndApply(finalElement, docId, eventProtyle) {
     [].forEach.call(protyleElem.querySelectorAll(`.og-fake-doc-breadcrumb-container .${CONSTANTS.ARROW_SPAN_NAME}[data-og-type="FILE"], .og-fake-doc-breadcrumb-container .${CONSTANTS.ARROW_SPAN_NAME}[data-og-type="NOTEBOOK"], .og-fake-doc-breadcrumb-container .${CONSTANTS.ARROW_SPAN_NAME}[data-og-type="ROOT"]`), (elem)=>{
         elem.addEventListener("click", openRelativeMenu.bind(null, protyleElem));
     });
+    [].forEach.call(protyleElem.querySelectorAll(`.og-fake-doc-breadcrumb-container .og-fdb-doc-nav-button[data-doc-id]`), (elem)=>{
+        elem.addEventListener("click", clickAdjacentDocButton);
+    });
     [].forEach.call(protyleElem.querySelectorAll(`.og-fake-doc-breadcrumb-container .protyle-breadcrumb__bar`), (elem)=>{
         elem.addEventListener("mousewheel", scrollConvert.bind(null, elem), true);
     });
@@ -779,6 +920,25 @@ function setAndApply(finalElement, docId, eventProtyle) {
     function scrollConvert(elem, event) {
         elem.scrollLeft = elem.scrollLeft + event.deltaY;
     }
+}
+
+function clickAdjacentDocButton(event) {
+    const docId = event.currentTarget?.getAttribute("data-doc-id");
+    if (!docId) {
+        return;
+    }
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    event.stopPropagation();
+    openRefLinkByAPI({
+        paramDocId: docId,
+        keyParam: {
+            ctrlKey: event?.ctrlKey,
+            shiftKey: event?.shiftKey,
+            altKey: event?.altKey,
+            metaKey: event?.metaKey,
+        },
+    });
 }
 
 function clickBreadcrumbItemAgent(type, protyleElem, event) {
@@ -1320,6 +1480,58 @@ function setStyle() {
         color: var(--b3-menu-highlight-color);
         background-color: var(--b3-menu-highlight-background);
     }
+
+    .og-fdb-doc-nav {
+        display: inline-flex;
+        align-items: center;
+        gap: 2px;
+        margin-left: 4px;
+        flex-shrink: 0;
+    }
+
+    .og-fdb-doc-nav-button {
+        align-items: center;
+        background: transparent;
+        border: none;
+        border-radius: var(--b3-border-radius);
+        color: var(--b3-theme-on-surface-light);
+        cursor: pointer;
+        display: inline-flex;
+        gap: 4px;
+        height: 24px;
+        justify-content: center;
+        max-width: min(180px, 22vw);
+        min-width: 0;
+        padding: 0 6px;
+    }
+
+    .og-fdb-doc-nav-button svg {
+        flex-shrink: 0;
+        height: 12px;
+        width: 12px;
+    }
+
+    .og-fdb-doc-nav-button-text {
+        display: inline-block;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .og-fdb-doc-nav-button[data-og-adjacent-direction="previous"] svg {
+        transform: rotate(180deg);
+    }
+
+    .og-fdb-doc-nav-button:not(:disabled):hover {
+        color: var(--b3-menu-highlight-color);
+        background-color: var(--b3-menu-highlight-background);
+    }
+
+    .og-fdb-doc-nav-button:disabled {
+        cursor: not-allowed;
+        opacity: 0.35;
+    }
     /*移动端样式*/
     .og-fdb-mobile-btn-class {
         max-width: 60%;
@@ -1522,14 +1734,16 @@ async function getDocInfo(docId) {
     return parseBody(request(url, {id: docId}));
 }
 
-async function listDocsByPath({path, notebook = undefined, sort = undefined, maxListLength = undefined}) {
+async function listDocsByPath({path, notebook = undefined, sort = undefined, maxListLength = undefined, ignoreDocMaxNum = false}) {
     let data = {
         path: path,
         "ignoreMaxListHint": true
     };
     if (notebook) data["notebook"] = notebook;
     if (sort) data["sort"] = sort;
-    if (g_setting.docMaxNum != 0) {
+    if (maxListLength != undefined) {
+        data["maxListCount"] = maxListLength;
+    } else if (!ignoreDocMaxNum && g_setting.docMaxNum != 0) {
         data["maxListCount"] = g_setting.docMaxNum >= 32 ? g_setting.docMaxNum : 32;
     } else {
         data["maxListCount"] = 0;
@@ -1971,6 +2185,10 @@ let zh_CN = {
     "setting_nameMaxLength_desp": "文档名超出的部分将被删除。设置为0则不限制。",
     "setting_docMaxNum_name": "文档最大数量",
     "setting_docMaxNum_desp": "当子文档或同级文档超过该值时，后续文档将不再显示。设置为0则不限制。",
+    "setting_showAdjacentDocButton_name": "显示上一篇/下一篇按钮",
+    "setting_showAdjacentDocButton_desp": "在文档面包屑右侧显示上一篇文档和下一篇文档按钮；按文件树顺序在同一层级深度的文档之间跳转。",
+    "previous_doc": "上一篇文档",
+    "next_doc": "下一篇文档",
     "error_initFailed": "文档面包屑插件初始化失败，如果可以，请向开发者反馈此问题",
     "setting_panel_title": "文档面包屑插件设置",
 }
