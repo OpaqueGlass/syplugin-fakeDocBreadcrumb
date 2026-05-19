@@ -1695,6 +1695,23 @@ async function parseBody(response) {
     return r.code === 0 ? r.data : null;
 }
 
+async function createDoc(notebookId, path, title, md, listDocTree) {
+    let url = "/api/filetree/createDoc";
+    let data = {
+        notebook: notebookId,
+        path: path,
+        title: title,
+        md: md,
+        listDocTree: listDocTree
+    }
+    let response = await request(url, data);
+    if (response.code == 0){
+        return response.data;
+    }else{
+        return null;
+    }
+}
+
 async function getDocOutline(docId) {
     let url = "/api/outline/getDocOutline";
     let data = {"id": docId};
