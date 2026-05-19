@@ -1352,6 +1352,9 @@ function setStyle() {
     const head = document.getElementsByTagName('head')[0];
     const style = document.createElement('style');
     style.setAttribute("id", CONSTANTS.STYLE_ID);
+
+    const arrowSize = isCurrentVersionLessThan("3.7.0") ? 10 : 14;
+
     style.innerHTML = `
     /*#commonMenu[data-name='og-fdb-relative-menu'] .b3-menu__items {
         max-height: 60vh;
@@ -1423,8 +1426,8 @@ function setStyle() {
     }
 
     .og-fake-doc-breadcrumb-arrow {
-        height: 14px;
-        width: 14px;
+        height: ${arrowSize}px;
+        width: ${arrowSize}px;
         color: var(--b3-theme-on-surface-light);
         margin: 0 4px;
         flex-shrink: 0
