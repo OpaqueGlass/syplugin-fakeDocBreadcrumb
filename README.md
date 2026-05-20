@@ -1,6 +1,6 @@
 ## fakeDocBreadcrumb
 
-[中文](README_zh_CN.md) | English
+[中文](README_zh_CN.md) | **English**
 
 > A [SiYuan Note](https://github.com/siyuan-note/siyuan) plugin that displays the current document path information above the editor.
 
@@ -10,6 +10,15 @@
 
 - Download from marketplace in Siyuan OR 1: Unzip the `package.zip` file in Release, 2: Move the folder to `{workplace}/data/plugins/`, 3: Rename the folder to the repo name;
 - Just turn on the plugin; (`Marketplace`--`Downloaded`--`Plugin`--`Fake Doc Breadcrumb`, click switch icon)
+
+### Features
+
+- Add the current document navigation path above the editor;
+- Click to jump to the corresponding document, right-click to expand the sub-documents of that document;
+- (Setting) The sub-document menu supports further expansion according to the hierarchy, up to 7 levels;
+- (Setting) When the hierarchy exceeds 5 levels, the first 2 levels and the last 3 levels are retained by default;
+- (Setting) Show previous/next document buttons on the right side of the breadcrumb;
+- (Setting) Show new document button in the menu;
 
 #### Other explanation
 

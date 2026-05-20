@@ -1,15 +1,12 @@
 ## fakeDocBreadcrumb （伪）文档面包屑
 
-中文 | [English](README.md)
+**中文** | [English](README.md)
 
 > 在编辑器上方显示当前文档路径信息的[思源笔记](https://github.com/siyuan-note/siyuan)插件。
 
-> 当前版本：v1.3.0
-> - **新增**：介入块面包屑的`>`菜单显示文档内标题层级；
-> 
-> 上一版本：v1.2.4 修复了下述问题，建议更新：
-> - **修复**：“与块面包屑在同一行显示”启用时无法正常打开文档的问题;
-> - **修复**：“与块面包屑在同一行显示”启用期间打开过的文档将加载全部/聚焦到整篇文档的问题;（通过点击块面包屑的任意块，然后点击退出聚焦修复此问题；或启用插件的自动修复）
+> 当前版本：v1.4.0
+> - 新增：（设置项）在面包屑右侧显示上一篇下一篇按钮（by [@Achuan-2](https://github.com/Achuan-2)）；
+> - 新增：（设置项）🧪在菜单中显示新建文档按钮；
 > 
 > 详见[更新日志](CHANGELOG.md)
 
@@ -27,8 +24,10 @@
 
 - 在编辑器顶部添加当前文档导航路径；
 - 点击跳转到对应文档，右键点击展开该文档的下层文档；
-- 下层文档菜单支持继续按照层级展开，最多支持7层级（设置项）；
-- 层级超出5时，默认保留前2层级、后3层级（设置项）；
+- （设置项）下层文档菜单支持继续按照层级展开，最多支持7层级；
+- （设置项）层级超出5时，默认保留前2层级、后3层级；
+- （设置项）在面包屑右侧显示上一篇下一篇按钮；
+- （设置项）在菜单中显示新建文档按钮；
 
 ### 兼容性说明
 
@@ -49,5 +48,5 @@
 | ------------------------------------------------------------ | ------------------------------------------------------------ | ------------ |
 | [leolee9086](https://github.com/leolee9086) / [cc-template](https://github.com/leolee9086/cc-template) | 使用挂件渲染模板；[木兰宽松许可证， 第2版](https://github.com/leolee9086/cc-template/blob/main/LICENSE) | 点击打开文档 |
 | [zuoez02](https://github.com/zuoez02)/[siyuan-plugin-system](https://github.com/zuoez02/siyuan-plugin-system) | 插件系统（社区版）                                                     |              |
-| [Hug-Zephyr](https://github.com/Hug-Zephyr)/[HZ-syplugin-fakeDocBreadcrumb](https://github.com/Hug-Zephyr/HZ-syplugin-fakeDocBreadcrumb) |        fork-repo，进行了亿些优化                                               | 右键菜单调整，菜单超长调整             |
+| [Hug-Zephyr](https://github.com/Hug-Zephyr)/[HZ-syplugin-fakeDocBreadcrumb](https://github.com/Hug-Zephyr/HZ-syplugin-fakeDocBreadcrumb) |        这是一个fork-repo，进行了亿些优化                                               | 右键菜单调整，菜单超长调整             |
 | [TCOTC](https://github.com/TCOTC) |        反馈和问题定位                                             | 详见issue #30~32             |
