@@ -65,6 +65,7 @@ let g_setting = {
     "swapClickFunction": null,
     "showRoot": null,
     "showAdjacentDocButton": null,
+    "createDocBtnInMenu": null,
 };
 let g_setting_default = {
     "nameMaxLength": 15,
@@ -88,6 +89,7 @@ let g_setting_default = {
     "showAdjacentDocButton": true,
     "@version": 20250922,
     "autoFixFocusError": false,
+    "createDocBtnInMenu": false,
 };
 /**
  * Plugin类
@@ -221,6 +223,7 @@ class FakeDocBreadcrumb extends siyuan.Plugin {
             new SettingProperty("menuExtendSubDocDepth", "NUMBER", [1, 7]),
             new SettingProperty("swapClickFunction", "SWITCH", null),
             new SettingProperty("showAdjacentDocButton", "SWITCH", null),
+            new SettingProperty("createDocBtnInMenu", "SWITCH", null),
         ]));
 
         hello.appendChild(settingForm);
@@ -683,19 +686,31 @@ async function generateElement(pathObjects, docId, protyle) {
     barElement.classList.add("protyle-breadcrumb__bar");
     // barElement.classList.add("protyle-breadcrumb__bar--nowrap");
     barElement.innerHTML = htmlStr;
+    let adjacentElement = null;
     if (g_setting.showAdjacentDocButton) {
-        barElement.appendChild(await generateAdjacentDocNav(pathObjects));
+        adjacentElement = await generateAdjacentDocNav(pathObjects);
+    }
+    if (g_setting.oneLineBreadcrumb && g_setting.showAdjacentDocButton && adjacentElement) {
+        barElement.appendChild(adjacentElement);
     }
     result.appendChild(barElement);
+    if (g_setting.showAdjacentDocButton && !g_setting.oneLineBreadcrumb && adjacentElement) {
+        let spaceElement = document.createElement("span");
+        spaceElement.classList.add("protyle-breadcrumb__space", "og-fdb-adjacent-doc-nav-space-before");
+        result.appendChild(spaceElement);
+        adjacentElement = await generateAdjacentDocNav(pathObjects);
+        result.appendChild(adjacentElement);
+    }
+
     result.classList.add(CONSTANTS.CONTAINER_CLASS_NAME);
     if (!g_setting.oneLineBreadcrumb) {
         result.classList.add("protyle-breadcrumb");
     } else {
         result.classList.add("og-breadcrumb-oneline");
     }
-    let spaceElement = document.createElement("span");
-    spaceElement.classList.add("protyle-breadcrumb__space");
-    result.appendChild(spaceElement);
+    // let spaceElement = document.createElement("span");
+    // spaceElement.classList.add("protyle-breadcrumb__space");
+    // result.appendChild(spaceElement);
     // result.style.top = (window.document.querySelector(`.fn__flex-1.protyle:has(.protyle-background[data-node-id="${docId}"]) .protyle-breadcrumb`).clientHeight) + "px";
     // 修改以使得内容下移30px .protyle-content
     return result;
@@ -742,9 +757,11 @@ function createAdjacentDocButton(direction, doc) {
     const svgNS = "http://www.w3.org/2000/svg";
     const svg = document.createElementNS(svgNS, "svg");
     svg.setAttribute("title", button.getAttribute("title"));
-    svg.setAttribute("aria-hidden", "true");
     const use = document.createElementNS(svgNS, "use");
     use.setAttributeNS("http://www.w3.org/1999/xlink", "xlink:href", "#iconRight");
+    if (direction === "previous") {
+        use.setAttributeNS("http://www.w3.org/1999/xlink", "xlink:href", "#iconLeft");
+    }
     svg.appendChild(use);
 
     const textSpan = document.createElement("span");
@@ -1033,7 +1050,31 @@ async function openRelativeMenu(protyleElem, event) {
     if (siblings.length <= 0) return;
     
     const tempMenu = new siyuan.Menu("og-fdb-relative-menu");
-    
+    // 创建新文档
+    // 只读模式这里也是显示创建按钮的
+    if (g_setting.createDocBtnInMenu && type !== "ROOT") {
+        let tempMenuItemObj = {
+            icon: `iconAdd`,
+            label: `<span class="${CONSTANTS.MENU_ITEM_CLASS_NAME}">${window.siyuan.languages.newFile}</span>`,
+            click: (htmlElement, event) => {
+                event.preventDefault();
+                event.stopImmediatePropagation();
+                event.stopPropagation();
+                const newPath = (thisPath.endsWith(".sy") ? thisPath.substring(0, thisPath.length - 3) + "/" : thisPath) + window.Lute.NewNodeID() + ".sy";
+
+                createDoc(box, newPath, window.siyuan.languages.untitled, "", true).then((response) => {
+                    if (response && response.id) {
+                        openRefLinkByAPI({
+                            paramDocId: response.id,
+                        });
+                    }
+                }).catch((err) => {
+                    errorPush(err);
+                });
+            }
+        };
+        tempMenu.addItem(tempMenuItemObj);
+    }
     // 本层级内容
     for (let i = 0; i < siblings.length; i++) {
         let currSibling = siblings[i];
@@ -1441,25 +1482,15 @@ function setStyle() {
     .protyle-breadcrumb__bar[data-og-fdb-added-el] .protyle-breadcrumb__arrow {
         cursor: pointer;
     }
-    .protyle-breadcrumb__bar[data-og-fdb-added-el] .protyle-breadcrumb__arrow:hover {
-        color: var(--b3-theme-on-background);
-        background-color: var(--b3-list-hover);
-    }
-
-    .protyle-breadcrumb__bar[data-og-fdb-added-el] .protyle-breadcrumb__arrow:hover > * {
-        color: var(--b3-menu-highlight-color);
-        background-color: var(--b3-menu-highlight-background);
-    }
-
+    .protyle-breadcrumb__bar[data-og-fdb-added-el] .protyle-breadcrumb__arrow:hover,
+    .protyle-breadcrumb__bar[data-og-fdb-added-el] .protyle-breadcrumb__arrow:hover > *,
     .og-fake-doc-breadcrumb-arrow-span:hover {
-        color: var(--b3-theme-on-background);
-        background-color: var(--b3-list-hover);
+        color: var(--b3-menu-highlight-color, var(--b3-theme-on-background));
+        background-color: var(--b3-menu-highlight-background, var(--b3-list-hover));
     }
 
     .og-fake-doc-breadcrumb-arrow-span:hover > .og-fake-doc-breadcrumb-arrow {
-        color: var(--b3-menu-highlight-color);
-        background-color: var(--b3-menu-highlight-background);
-    }
+        color: var(--b3-menu-highlight-color, var(--b3-theme-on-background));}
 
     .og-fdb-doc-nav {
         display: inline-flex;
@@ -1479,6 +1510,7 @@ function setStyle() {
         display: inline-flex;
         gap: 4px;
         height: 24px;
+        line-height: 24px;
         justify-content: center;
         max-width: min(180px, 12em, 22vw);
         min-width: 0;
@@ -1499,15 +1531,10 @@ function setStyle() {
         white-space: nowrap;
     }
 
-    .og-fdb-doc-nav-button[data-og-adjacent-direction="previous"] svg {
-        transform: rotate(180deg);
-    }
-
     .og-fdb-doc-nav-button:not(:disabled):hover {
-        color: var(--b3-menu-highlight-color);
-        background-color: var(--b3-menu-highlight-background);
+        color: var(--b3-menu-highlight-color, var(--b3-theme-on-background));
+        background-color: var(--b3-menu-highlight-background, var(--b3-list-hover));
     }
-
     .og-fdb-doc-nav-button:disabled {
         cursor: not-allowed;
         opacity: 0.35;
