@@ -42,6 +42,9 @@
     "setting_swapClickFunction_desp": "When enabled, left-click will expand the underlying document menu, right-click will open the document",
     "setting_showAdjacentDocButton_name": "Show previous/next document buttons",
     "setting_showAdjacentDocButton_desp": "Show previous and next document buttons on the right side of the document breadcrumb. Navigation only moves between sibling documents.",
+    "setting_showAdjacentDocButton_option_0": "Do not show",
+    "setting_showAdjacentDocButton_option_1": "Show only for same parent documents",
+    "setting_showAdjacentDocButton_option_2": "Show for same level documents",
     "setting_createDocBtnInMenu_name": "🧪Show create document button in document menu",
     "setting_createDocBtnInMenu_desp": "Show a create document button in the subdocument menu of the document breadcrumb; clicking it will create a new document at the corresponding level",
 

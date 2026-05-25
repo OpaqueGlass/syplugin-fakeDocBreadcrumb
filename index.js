@@ -37,6 +37,9 @@ const CONSTANTS = {
     POP_ALL: 2,
     MAX_NAME_LENGTH: 15,
     MULTILINE_CONFLICT_PLUGINS: ["siyuan-plugin-toolbar-plus"],
+    ADJ_NONE: "0",
+    ADJ_SAME_PARENT: "1",
+    ADJ_SAME_LEVEL: "2",
 }
 let g_initRetryInterval;
 let g_initFailedMsgTimeout;
@@ -86,8 +89,8 @@ let g_setting_default = {
     "menuExtendSubDocDepth": 2,
     "swapClickFunction": false,
     "showRoot": false,
-    "showAdjacentDocButton": true,
-    "@version": 20250922,
+    "showAdjacentDocButton": CONSTANTS.ADJ_SAME_LEVEL,
+    "@version": 20260525,
     "autoFixFocusError": false,
     "createDocBtnInMenu": false,
 };
@@ -119,20 +122,23 @@ class FakeDocBreadcrumb extends siyuan.Plugin {
             // 解析并载入配置
             try {
                 debugPush("载入配置中",settingCache);
-                // let resetFlag = false;
-                // if (settingCache["@version"]) {
-                //     if (settingCache["@version"] < g_setting_default["@version"]) {
-                //         resetFlag = true;
-                //     }
-                // } else {
-                //     resetFlag = true;
-                // }
-                // if (resetFlag) {
-                //     if (settingCache["oneLineBreadcrumb"] == true) {
-                //         settingCache["oneLineBreadcrumb"] = false;
-                //         showMessage(``)
-                //     }
-                // }
+                let resetFlag = false;
+                if (settingCache["@version"]) {
+                    if (settingCache["@version"] < g_setting_default["@version"]) {
+                        debugPush("配置版本过旧");
+                        resetFlag = true;
+                    }
+                } else {
+                    resetFlag = true;
+                }
+                if (resetFlag) {
+                    if (settingCache["showAdjacentDocButton"] === true) {
+                        settingCache["showAdjacentDocButton"] = CONSTANTS.ADJ_SAME_LEVEL;
+                    } else if (settingCache["showAdjacentDocButton"] === false) {
+                        settingCache["showAdjacentDocButton"] = CONSTANTS.ADJ_NONE;
+                    }
+                }
+                debugPush("载入配置", settingCache);    
                 // let settingData = JSON.parse(settingCache);
                 Object.assign(g_setting, settingCache);
                 this.eventBusInnerHandler();
@@ -222,7 +228,11 @@ class FakeDocBreadcrumb extends siyuan.Plugin {
             new SettingProperty("immediatelyUpdate", "SWITCH", null),
             new SettingProperty("menuExtendSubDocDepth", "NUMBER", [1, 7]),
             new SettingProperty("swapClickFunction", "SWITCH", null),
-            new SettingProperty("showAdjacentDocButton", "SWITCH", null),
+            new SettingProperty("showAdjacentDocButton", "SELECT", [
+                {value: CONSTANTS.ADJ_NONE},
+                {value: CONSTANTS.ADJ_SAME_PARENT},
+                {value: CONSTANTS.ADJ_SAME_LEVEL},
+            ]),
             new SettingProperty("createDocBtnInMenu", "SWITCH", null),
         ]));
 
@@ -687,14 +697,14 @@ async function generateElement(pathObjects, docId, protyle) {
     // barElement.classList.add("protyle-breadcrumb__bar--nowrap");
     barElement.innerHTML = htmlStr;
     let adjacentElement = null;
-    if (g_setting.showAdjacentDocButton) {
+    if (g_setting.showAdjacentDocButton !== CONSTANTS.ADJ_NONE) {
         adjacentElement = await generateAdjacentDocNav(pathObjects);
     }
-    if (g_setting.oneLineBreadcrumb && g_setting.showAdjacentDocButton && adjacentElement) {
+    if (g_setting.oneLineBreadcrumb && g_setting.showAdjacentDocButton !== CONSTANTS.ADJ_NONE && adjacentElement) {
         barElement.appendChild(adjacentElement);
     }
     result.appendChild(barElement);
-    if (g_setting.showAdjacentDocButton && !g_setting.oneLineBreadcrumb && adjacentElement) {
+    if (g_setting.showAdjacentDocButton !== CONSTANTS.ADJ_NONE && !g_setting.oneLineBreadcrumb && adjacentElement) {
         let spaceElement = document.createElement("span");
         spaceElement.classList.add("protyle-breadcrumb__space", "og-fdb-adjacent-doc-nav-space-before");
         result.appendChild(spaceElement);
@@ -789,6 +799,8 @@ async function getAdjacentDocs(pathObjects) {
     const result = {
         previousDoc: null,
         nextDoc: null,
+        sameLevelPrevious: false,
+        sameLevelNext: false,
     };
     if (!Array.isArray(pathObjects) || pathObjects.length <= 1) {
         return result;
@@ -803,17 +815,37 @@ async function getAdjacentDocs(pathObjects) {
     }
     result.previousDoc = sameLevelDocs[currentIndex - 1] ?? null;
     result.nextDoc = sameLevelDocs[currentIndex + 1] ?? null;
+    if (g_setting.showAdjacentDocButton === CONSTANTS.ADJ_SAME_LEVEL
+        && (!result.previousDoc || !result.nextDoc)
+    ) {
+        debugPush("当前文档同级没有足够的文档，尝试获取同层级文档");
+        const cache = {};
+        const sameLevelDocs = await getAdjacentDocsByDepth(pathObjects[0], currentDepth, cache);
+        const currentIndex = findAdjacentDocIndex(sameLevelDocs, currentDoc.id);
+        if (result.previousDoc == null && currentIndex > 0) {
+            result.sameLevelPrevious = true;
+            result.previousDoc = sameLevelDocs[currentIndex - 1] ?? null;
+        }
+        if (result.nextDoc == null && currentIndex < sameLevelDocs.length - 1) {
+            result.sameLevelNext = true;
+            result.nextDoc = sameLevelDocs[currentIndex + 1] ?? null;
+        }
+    }
     return result;
 }
 
 let g_adjacentDocCache = {};
 
-async function getAdjacentChildDocs(parentDoc) {
+async function getAdjacentChildDocs(parentDoc, cache = null) {
     if (!parentDoc?.path || !parentDoc?.box) {
         return [];
     }
     const cacheKey = `${parentDoc.box}-${parentDoc.path}`;
-    if (g_adjacentDocCache[cacheKey] && (Date.now() - g_adjacentDocCache[cacheKey].timestamp < 3 * 60 * 1000) && g_setting.immediatelyUpdate) {
+    if (cache && cache[cacheKey]) {
+        debugPush("使用传入缓存", cacheKey);
+        return cache[cacheKey].data;
+    }
+    if (cache == null && g_adjacentDocCache[cacheKey] && (Date.now() - g_adjacentDocCache[cacheKey].timestamp < 3 * 60 * 1000) && g_setting.immediatelyUpdate) {
         debugPush("使用相邻文档缓存", cacheKey);
         return g_adjacentDocCache[cacheKey].data;
     }
@@ -822,11 +854,40 @@ async function getAdjacentChildDocs(parentDoc) {
         notebook: parentDoc.box,
         ignoreDocMaxNum: true,
     });
+    const processedResponse = (response?.files ?? []).map(doc => {
+        doc["box"] = parentDoc.box;
+        return doc;
+    });
+    if (cache) {
+        cache[cacheKey] = {
+            "data": processedResponse,
+            "timestamp": Date.now(),
+        };
+    }
     g_adjacentDocCache[cacheKey] = {
-        "data": response?.files ?? [],
+        "data": processedResponse,
         "timestamp": Date.now(),
     };
     return g_adjacentDocCache[cacheKey].data;
+}
+
+async function getAdjacentDocsByDepth(parentDoc, targetDepth, cache) {
+    if (targetDepth <= 0) {
+        return [];
+    }
+    const childDocs = await getAdjacentChildDocs(parentDoc, cache);
+    if (targetDepth === 1) {
+        return childDocs;
+    }
+    let result = [];
+    for (const childDoc of childDocs) {
+        if (childDoc.subFileCount === 0) {
+            continue;
+        }
+        const subDocs = await getAdjacentDocsByDepth(childDoc, targetDepth - 1, cache);
+        result = result.concat(subDocs);
+    }
+    return result;
 }
 
 function findAdjacentDocIndex(docList, docId) {
