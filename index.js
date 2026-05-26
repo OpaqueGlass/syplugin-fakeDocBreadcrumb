@@ -738,12 +738,12 @@ async function generateAdjacentDocNav(pathObjects) {
     const navElement = document.createElement("span");
     navElement.className = "og-fdb-doc-nav";
     const adjacentDocs = await getAdjacentDocs(pathObjects);
-    navElement.appendChild(createAdjacentDocButton("previous", adjacentDocs.previousDoc));
-    navElement.appendChild(createAdjacentDocButton("next", adjacentDocs.nextDoc));
+    navElement.appendChild(createAdjacentDocButton("previous", adjacentDocs.previousDoc, adjacentDocs.sameLevelPrevious));
+    navElement.appendChild(createAdjacentDocButton("next", adjacentDocs.nextDoc, adjacentDocs.sameLevelNext));
     return navElement;
 }
 
-function createAdjacentDocButton(direction, doc) {
+function createAdjacentDocButton(direction, doc, isSameLevel = false) {
     const isPrevious = direction === "previous";
     const label = isPrevious ? (language["previous_doc"]) : (language["next_doc"]);
     const button = document.createElement("button");
@@ -1121,17 +1121,7 @@ async function openRelativeMenu(protyleElem, event) {
                 event.preventDefault();
                 event.stopImmediatePropagation();
                 event.stopPropagation();
-                const newPath = (thisPath.endsWith(".sy") ? thisPath.substring(0, thisPath.length - 3) + "/" : thisPath) + window.Lute.NewNodeID() + ".sy";
-
-                createDoc(box, newPath, window.siyuan.languages.untitled, "", true).then((response) => {
-                    if (response && response.id) {
-                        openRefLinkByAPI({
-                            paramDocId: response.id,
-                        });
-                    }
-                }).catch((err) => {
-                    errorPush(err);
-                });
+                createAndOpenEmptyDocAt(box, thisPath);
             }
         };
         tempMenu.addItem(tempMenuItemObj);
@@ -1262,6 +1252,34 @@ function addLazyLoadEventListeners(menuElement, maxDepth, protyleElem, currentDe
                 submenuContainer.innerHTML = `<button class="b3-menu__item" disabled><span class="b3-menu__label">${language["no_doc"]}</span></button>`;
                 return;
             }
+
+            // 创建子文档菜单项
+            // Menu Item
+            const menuItemEl = document.createElement('button');
+            menuItemEl.className = 'b3-menu__item';
+            // icon
+            const iconAddEl = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+            iconAddEl.classList.add('b3-menu__icon');
+            iconAddEl.innerHTML = `<use xlink:href="#iconAdd"></use>`;
+            menuItemEl.appendChild(iconAddEl);
+            
+            // label
+            const labelEl = document.createElement('span');
+            labelEl.className = 'b3-menu__label';
+            
+            // title
+            const docTitleEl = document.createElement('span');
+            docTitleEl.className = `${CONSTANTS.MENU_ITEM_CLASS_NAME}`;
+            docTitleEl.textContent = window.siyuan.languages.newFile;
+            labelEl.appendChild(docTitleEl);
+            menuItemEl.appendChild(labelEl);
+            submenuContainer.appendChild(menuItemEl);
+            menuItemEl.addEventListener('click', (event) => {
+                event.preventDefault();
+                event.stopImmediatePropagation();
+                event.stopPropagation();
+                createAndOpenEmptyDocAt(box, path);
+            });
             
             // 子文档菜单
             for (const childDoc of childDocuments) {
@@ -1784,6 +1802,19 @@ async function request(url, data) {
 async function parseBody(response) {
     let r = await response;
     return r.code === 0 ? r.data : null;
+}
+
+async function createAndOpenEmptyDocAt(box, path) {
+    const newPath = (path.endsWith(".sy") ? path.substring(0, path.length - 3) + "/" : path) + window.Lute.NewNodeID() + ".sy";
+    createDoc(box, newPath, window.siyuan.languages.untitled, "", true).then((response) => {
+        if (response && response.id) {
+            openRefLinkByAPI({
+                paramDocId: response.id,
+            });
+        }
+    }).catch((err) => {
+        errorPush(err);
+    });
 }
 
 async function createDoc(notebookId, path, title, md, listDocTree) {
