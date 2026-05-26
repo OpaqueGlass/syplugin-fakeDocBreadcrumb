@@ -126,6 +126,7 @@ class FakeDocBreadcrumb extends siyuan.Plugin {
                 if (settingCache["@version"]) {
                     if (settingCache["@version"] < g_setting_default["@version"]) {
                         debugPush("配置版本过旧");
+                        settingCache["@version"] = g_setting_default["@version"];
                         resetFlag = true;
                     }
                 } else {
@@ -137,6 +138,7 @@ class FakeDocBreadcrumb extends siyuan.Plugin {
                     } else if (settingCache["showAdjacentDocButton"] === false) {
                         settingCache["showAdjacentDocButton"] = CONSTANTS.ADJ_NONE;
                     }
+                    this.saveData(`settings.json`, JSON.stringify(settingCache));
                 }
                 debugPush("载入配置", settingCache);    
                 // let settingData = JSON.parse(settingCache);
@@ -1279,6 +1281,8 @@ function addLazyLoadEventListeners(menuElement, maxDepth, protyleElem, currentDe
                 event.stopImmediatePropagation();
                 event.stopPropagation();
                 createAndOpenEmptyDocAt(box, path);
+                g_relativeMenu["menu"]?.close();
+                g_relativeMenu = null;
             });
             
             // 子文档菜单
@@ -1473,7 +1477,15 @@ function setStyle() {
     const style = document.createElement('style');
     style.setAttribute("id", CONSTANTS.STYLE_ID);
 
-    const arrowSize = isCurrentVersionLessThan("3.7.0") ? 10 : 14;
+    const styleForv3_7_0 = isCurrentVersionLessThan("3.7.0") ? `` : `
+    .og-fake-doc-breadcrumb-arrow {
+        height: 14px;
+        width: 14px;
+    }
+    .og-fake-doc-breadcrumb-container.og-breadcrumb-oneline .protyle-breadcrumb__bar {
+        height: 100%;
+    }
+    `;
 
     style.innerHTML = `
     /*#commonMenu[data-name='og-fdb-relative-menu'] .b3-menu__items {
@@ -1546,8 +1558,8 @@ function setStyle() {
     }
 
     .og-fake-doc-breadcrumb-arrow {
-        height: ${arrowSize}px;
-        width: ${arrowSize}px;
+        height: 10px;
+        width: 10px;
         color: var(--b3-theme-on-surface-light);
         margin: 0 4px;
         flex-shrink: 0
@@ -1642,6 +1654,10 @@ function setStyle() {
     .og-fake-doc-breadcrumb-ellipsis {
         max-width: min(112px, 12em, 15vw);
     }
+    /* v3.7.0 适配用*/
+${styleForv3_7_0}
+
+    /* END */
     `;
     head.appendChild(style);
 }
