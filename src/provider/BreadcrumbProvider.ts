@@ -14,7 +14,7 @@ import { isChildDocExist } from "@/syapi/custom";
 import { openRefLinkByAPI } from "@/utils/common";
 import { lang } from "@/utils/lang";
 import { getReadOnlyGSettings } from "@/manager/settingManager";
-import { saveMenuInstance, clearMenuInstance } from "@/worker/menuHelper";
+import { saveMenuInstance, clearMenuInstance, readFromWnd } from "@/worker/menuHelper";
 import * as siyuan from "siyuan";
 import { BreadcrumbContext } from "./IProvider";
 
@@ -496,6 +496,30 @@ export class BreadcrumbProvider implements IBreadcrumbProvider {
                     return;
                 }
 
+                // 新建文档按钮（对齐 refer.js addLazyLoadEventListeners）
+                const addItemEl = document.createElement('button');
+                addItemEl.className = 'b3-menu__item';
+                // icon
+                const iconAddEl = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+                iconAddEl.classList.add('b3-menu__icon');
+                iconAddEl.innerHTML = `<use xlink:href="#iconAdd"></use>`;
+                addItemEl.appendChild(iconAddEl);
+                // label
+                const addLabelEl = document.createElement('span');
+                addLabelEl.className = 'b3-menu__label';
+                const addTitleEl = document.createElement('span');
+                addTitleEl.className = `${CONSTANTS.MENU_ITEM_CLASS_NAME}`;
+                addTitleEl.textContent = window.siyuan.languages.newFile;
+                addLabelEl.appendChild(addTitleEl);
+                addItemEl.appendChild(addLabelEl);
+                submenuContainer.appendChild(addItemEl);
+                addItemEl.addEventListener('click', (event: MouseEvent) => {
+                    event.preventDefault();
+                    event.stopImmediatePropagation();
+                    event.stopPropagation();
+                    this.createAndOpenEmptyDocAt(box, path);
+                });
+
                 for (const childDoc of childDocs) {
                     const docName = trimListDocsByPathAPIReturnedDocName(childDoc.name ?? "");
                     const trimedName = docName.length > setting.nameMaxLength
@@ -579,12 +603,21 @@ export class BreadcrumbProvider implements IBreadcrumbProvider {
         });
     }
 
-    /** 创建并打开空文档 */
+    /** 创建并打开空文档（对齐 refer.js createAndOpenEmptyDocAt，含创建后关闭菜单） */
     private async createAndOpenEmptyDocAt(box: string, path: string): Promise<void> {
         try {
-            const newDocId = await createDocWithPath(box, path);
-            if (newDocId) {
-                openRefLinkByAPI({ paramDocId: newDocId });
+            // 生成唯一新文档路径（对齐 refer.js：拼接 NewNodeID + ".sy"）
+            const newPath = (path.endsWith(".sy") ? path.substring(0, path.length - 3) + "/" : path)
+                + (window as any).Lute.NewNodeID() + ".sy";
+            // 调用 /api/filetree/createDoc，标题为本地化"未命名"，listDocTree=true
+            const newDocData = await createDocWithPath(box, newPath, window.siyuan.languages.untitled, "", true);
+            // 创建并打开文档后，关闭整个相关文档菜单（对齐 refer.js g_relativeMenu.close()）
+            const recentMenu = readFromWnd("recentMenu");
+            if (recentMenu && recentMenu.menu) {
+                recentMenu.menu.close();
+            }
+            if (newDocData && newDocData.id) {
+                openRefLinkByAPI({ paramDocId: newDocData.id });
             }
         } catch (err) {
             errorPush("创建文档失败", err);

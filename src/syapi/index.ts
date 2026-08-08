@@ -716,7 +716,7 @@ export async function createDocWithPath(notebookid, path, title = "Untitled", co
     let url = "/api/filetree/createDoc";
     let response = await postRequest({"notebook": notebookid, "path": path, "md": contentMd, "title": title, "listDocTree": listDocTree}, url);
     if (response.code == 0) {
-        return true;
+        return response.data;
     }
     logPush("responseERROR", response);
     throw Error(response.msg);
