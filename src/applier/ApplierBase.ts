@@ -17,17 +17,11 @@ export abstract class BreadcrumbApplier {
      * 应用面包屑到 DOM
      */
     async apply(context: BreadcrumbContext): Promise<void> {
-        // 1. 移除旧面包屑
-        this.removeOldBreadcrumb(context.protyleElement);
-        // 2. 创建统一容器
         const container = this.createContainer(context);
-        // 3. 调用各 Provider 生成内容并装入容器
         await this.assembleContainer(container, context);
-        // 4. 插入到 DOM
+        this.removeOldBreadcrumb(context.protyleElement);
         this.insertToDOM(container, context);
-        // 5. 宽度溢出调整
         this.adjustOverflow(container);
-        // 6. 绑定事件
         this.bindProviderEvents(container, context);
     }
 

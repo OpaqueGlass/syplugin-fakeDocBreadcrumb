@@ -5,16 +5,17 @@
  */
 
 import { CONSTANTS } from "@/constants";
-import { debugPush, errorPush, logPush, warnPush, infoPush } from "@/logger";
+import { debugPush, errorPush, logPush, warnPush } from "@/logger";
 import { getReadOnlyGSettings } from "@/manager/settingManager";
 import { isValidStr } from "@/utils/commonCheck";
 import { isNotebookDoc, isNotebookDocEnabled, getListDocsByPathAPIFilePath } from "@/utils/compatUtils";
-import { getProtyleInfo } from "@/utils/onlyThisUtil";
+import { escapeHTML, stripHTML } from "@/utils/onlyThisUtil";
 import { getNotebookInfoLocallyF, getHPathById, getDocInfo, isMobile, getDocOutlineAPI } from "@/syapi";
 import { BreadcrumbProvider } from "@/provider/BreadcrumbProvider";
 import { AdjacentDocProvider } from "@/provider/AdjacentDocProvider";
 import { ApplierFactory } from "@/applier/ApplierFactory";
-import { sleep, openRefLinkByAPI } from "@/utils/common";
+import { clearMenuInstance, saveMenuInstance } from "@/worker/menuHelper";
+import { getPluginInstance } from "@/utils/getInstance";
 import * as siyuan from "siyuan";
 
 export class BreadcrumbManager {
@@ -237,51 +238,157 @@ export class BreadcrumbManager {
      * TODO: 后续可提取为独立的 BlockBreadcrumbMenu 类
      */
     addBlockBdMenuListener(protyleElement: HTMLElement, docId: string, protyle: any): void {
-        const barElement = protyleElement.querySelector(".protyle-breadcrumb__bar") as HTMLElement;
-        if (!barElement) return;
-        if (barElement.dataset.ogFdbAddedEl) return; // 已绑定
-        barElement.dataset.ogFdbAddedEl = "true";
+        // 限制范围到 SiYuan 原生块面包屑条（避免影响插件插入的文档面包屑）
+        const breadcrumbBar = protyleElement.querySelector(".protyle-breadcrumb > .protyle-breadcrumb__bar") as HTMLElement;
+        if (!breadcrumbBar) return;
+        if (breadcrumbBar.dataset["ogFdbAddedEl"]) return; // 已绑定
+        breadcrumbBar.dataset["ogFdbAddedEl"] = "true";
 
-        // 为块面包屑箭头添加点击监听
-        const arrows = barElement.querySelectorAll(".protyle-breadcrumb__arrow");
-        arrows.forEach((arrow) => {
-            arrow.addEventListener("click", async (event) => {
-                event.stopPropagation();
-                event.preventDefault();
-                // 基于文档大纲展示标题菜单
-                await this.openBlockBreadcrumbMenu(docId, protyle, event);
-            });
+        breadcrumbBar.addEventListener("click", async (event: MouseEvent) => {
+            // 使用 .closest() 判断点击的是否是箭头或其内部元素
+            const arrowElement = (event.target as HTMLElement).closest(".protyle-breadcrumb__arrow") as HTMLElement;
+            if (!arrowElement) {
+                return;
+            }
+            // 获取箭头左侧的面包屑项目
+            const precedingItem = arrowElement.previousElementSibling as HTMLElement;
+            if (!precedingItem || !precedingItem.classList.contains("protyle-breadcrumb__item")) {
+                return;
+            }
+            const afterItem = arrowElement.nextElementSibling as HTMLElement;
+            let nextNodeId = "";
+            if (afterItem && precedingItem.classList.contains("protyle-breadcrumb__item")) {
+                nextNodeId = afterItem.dataset.nodeId ?? "";
+            }
+            // 提取 Node ID 和图标信息
+            const nodeId = precedingItem.dataset.nodeId ?? "";
+            const iconUseElement = precedingItem.querySelector("svg.popover__block use") as SVGUseElement;
+
+            if (!nodeId || !iconUseElement) {
+                return;
+            }
+            event.stopImmediatePropagation();
+            event.stopPropagation();
+            event.preventDefault();
+            const iconHref = iconUseElement.getAttributeNS("http://www.w3.org/1999/xlink", "href");
+
+            const menuId = "bid_" + nodeId;
+            clearMenuInstance(menuId);
+            await this.openBlockBreadcrumbMenu(docId, protyle, arrowElement, nodeId, iconHref ?? "", nextNodeId);
         });
     }
 
-    /** 块面包屑大纲菜单（简化版） */
-    private async openBlockBreadcrumbMenu(docId: string, protyle: any, event: Event): Promise<void> {
-        const outline = await getDocOutlineAPI(docId);
-        if (!outline || outline.length === 0) return;
-
-        const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
-        const menu = new siyuan.Menu("og-fdb-block-breadcrumb-menu");
-
-        const buildMenuItems = (items: any[], depth: number = 0) => {
-            for (const item of items) {
-                const indent = "  ".repeat(depth);
-                menu.addItem({
-                    label: `${indent}${item.name}`,
-                    click: (htmlElement: HTMLElement, event: MouseEvent) => {
-                        event.preventDefault();
-                        event.stopImmediatePropagation();
-                        event.stopPropagation();
-                        if (item.id) {
-                            openRefLinkByAPI({ paramDocId: item.id });
-                        }
-                    },
-                });
-                if (item.children && item.children.length > 0) {
-                    buildMenuItems(item.children, depth + 1);
-                }
+    /**
+     * 块面包屑大纲菜单
+     * 对应原 refer.js addBlockBdMenuListener 中基于大纲构建菜单的部分
+     * 根据图标类型决定菜单内容：#iconFile 显示顶级标题，#iconHx 显示该标题的直接子标题
+     */
+    private async openBlockBreadcrumbMenu(docId: string, protyle: any, arrowElement: HTMLElement, nodeId: string, iconHref: string, nextNodeId: string): Promise<void> {
+        const setting = getReadOnlyGSettings();
+        try {
+            // 获取文档大纲
+            const outlineData = await getDocOutlineAPI(docId);
+            if (outlineData == null) {
+                siyuan.showMessage(window.siyuan.languages.nothingToDisplay + "--- fakeDocBreadcrumb");
+                return;
             }
-        };
-        buildMenuItems(outline);
-        menu.open({ x: rect.left, y: rect.bottom, isLeft: false });
+
+            // 根据图标类型来决定菜单内容
+            let menuItems: any[] = [];
+            if (iconHref === "#iconFile") {
+                // 如果是文档图标，显示所有顶级标题
+                menuItems = outlineData.filter((item: any) => item.depth === 0);
+            } else if (iconHref.startsWith("#iconH")) {
+                // 如果是标题图标 (H1-H6)，显示其下的直接子标题
+                const findHeadingById = (items: any[], targetId: string): any => {
+                    for (const item of items) {
+                        if (item.id === targetId) {
+                            return item;
+                        }
+                        if (item.blocks && item.blocks.length > 0) {
+                            const found = findHeadingById(item.blocks, targetId);
+                            if (found) return found;
+                        }
+                        if (item.children && item.children.length > 0) {
+                            const found = findHeadingById(item.children, targetId);
+                            if (found) return found;
+                        }
+                    }
+                    return null;
+                };
+                const parentHeading = findHeadingById(outlineData, nodeId);
+                if (parentHeading) {
+                    menuItems = parentHeading.blocks || parentHeading.children || [];
+                }
+            } else {
+                siyuan.showMessage(window.siyuan.languages.nothingToDisplay + "--- fakeDocBreadcrumb");
+                return;
+            }
+
+            // 递归构建菜单项的函数
+            const buildMenuItems = (items: any[]): any[] => {
+                return items.map((item: any) => {
+                    const fullName = escapeHTML(stripHTML(item.name || item.content || "N/A"));
+                    const trimedName = fullName.length > setting.nameMaxLength
+                        ? fullName.substring(0, setting.nameMaxLength) + "..."
+                        : fullName;
+                    const menuItem: any = {
+                        id: item.id,
+                        label: `<span class="${CONSTANTS.MENU_ITEM_CLASS_NAME}" data-og-block-node-id="${item.id}" title="${fullName}">${trimedName}</span>`,
+                        current: nextNodeId === item.id,
+                        icon: "icon" + (item.subType ?? "").toUpperCase(),
+                        click: (htmlElement: HTMLElement, evt: MouseEvent) => {
+                            const blocId = htmlElement.querySelector(".og-fake-doc-breadcrumb-menu-item-container")?.getAttribute("data-og-block-node-id");
+                            evt.preventDefault();
+                            evt.stopImmediatePropagation();
+                            evt.stopPropagation();
+                            if (blocId) {
+                                siyuan.openTab({
+                                    app: getPluginInstance().app,
+                                    doc: {
+                                        id: blocId,
+                                        action: ["cb-get-focus", "cb-get-all"],
+                                        keepCursor: true,
+                                    },
+                                    afterOpen: () => {
+                                        // 更新 breadcrumb
+                                        protyle?.breadcrumb?.render(protyle);
+                                    }
+                                });
+                            }
+                        }
+                    };
+
+                    const childItems = item.blocks || item.children;
+                    if (childItems && childItems.length > 0) {
+                        menuItem.type = "submenu";
+                        menuItem.submenu = buildMenuItems(childItems);
+                    }
+                    return menuItem;
+                });
+            };
+
+            // 打开菜单
+            const rect = arrowElement.getBoundingClientRect();
+            if (menuItems.length > 0) {
+                const tempMenu = new siyuan.Menu("og-fdb-relative-menu");
+                buildMenuItems(menuItems).forEach((menuItem) => {
+                    tempMenu.addItem(menuItem);
+                });
+
+                // 菜单展示位置调整
+                if (menuItems.length * 30 > (window.innerHeight - rect.bottom) * 0.7) {
+                    tempMenu.open({ x: rect.right, y: rect.top, isLeft: false });
+                } else {
+                    tempMenu.open({ x: rect.left, y: rect.bottom, isLeft: false });
+                }
+
+                saveMenuInstance(tempMenu, "bid_" + nodeId);
+            } else {
+                siyuan.showMessage(window.siyuan.languages.nothingToDisplay + "--- fakeDocBreadcrumb");
+            }
+        } catch (error) {
+            errorPush("获取或处理大纲数据时出错:", error);
+        }
     }
 }

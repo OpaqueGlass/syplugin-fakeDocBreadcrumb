@@ -59,11 +59,11 @@ export default class EventHandler {
         }
         debugPush("正确Protyle", protyle);
 
-        // 调用 BreadcrumbManager 处理
-        await this.breadcrumbManager.processProtyle(protyle);
-
         // 添加块面包屑菜单监听
         this.breadcrumbManager.addBlockBdMenuListener(protyle.element, protyle.block.rootID, protyle);
+
+        // 调用 BreadcrumbManager 处理
+        await this.breadcrumbManager.processProtyle(protyle);
     }
 
     /**

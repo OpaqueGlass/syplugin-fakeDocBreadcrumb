@@ -230,6 +230,29 @@ export function getEmojiElement(
 }
 
 /**
+ * 去除字符串中的 HTML 标签，返回纯文本
+ * 对应原 refer.js 中的 stripHTML
+ */
+export function stripHTML(input: string): string {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(input, "text/html");
+    return doc.documentElement.textContent || "";
+}
+
+/**
+ * HTML 字符转义，防止菜单项文本中的特殊字符破坏 HTML 结构
+ * 对应原 refer.js 中的 escapeHTML
+ */
+export function escapeHTML(str: string): string {
+    return str
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
+/**
  * 使用设置中的参数处理文档
  * @param param0 
  */
