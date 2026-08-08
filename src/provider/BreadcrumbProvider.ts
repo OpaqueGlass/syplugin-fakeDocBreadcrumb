@@ -524,17 +524,35 @@ export class BreadcrumbProvider implements IBreadcrumbProvider {
                     }
 
                     if (childDoc.subFileCount > 0 && currentDepth + 1 < maxDepth) {
-                        menuItemEl.classList.add('b3-menu__item--submenu');
+                        // 对齐 refer.js：使用 --custom 类（SiYuan 据此识别为可展开自定义子菜单项）
+                        menuItemEl.classList.add('b3-menu__item--ogfdbcustom');
+                        docTitleEl.setAttribute('data-has-children', 'true');
+                        docTitleEl.setAttribute('data-path', childDoc.path || '');
+                        docTitleEl.setAttribute('data-box', box);
+                        docTitleEl.setAttribute('data-loaded', 'false');
+
+                        // 子文档有下级时，追加 ">" 箭头（对齐 refer.js addLazyLoadEventListeners）
+                        const svgNS = 'http://www.w3.org/2000/svg';
+                        const arrowIcon = document.createElementNS(svgNS, 'svg');
+                        arrowIcon.setAttribute('class', 'b3-menu__icon b3-menu__icon--small');
+                        const useEl = document.createElementNS(svgNS, 'use');
+                        useEl.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', '#iconRight');
+                        arrowIcon.appendChild(useEl);
+                        menuItemEl.appendChild(arrowIcon);
+
+                        // 子文档容器（自定义子菜单）
                         const submenu = document.createElement('div');
                         submenu.className = 'b3-menu__submenu';
                         const submenuItems = document.createElement('div');
                         submenuItems.className = 'b3-menu__items';
+                        // Loading 占位（对齐 refer.js）
+                        const loadingItem = document.createElement('button');
+                        loadingItem.className = 'b3-menu__item';
+                        loadingItem.disabled = true;
+                        loadingItem.innerHTML = '<span class="b3-menu__label">Loading...</span>';
+                        submenuItems.appendChild(loadingItem);
                         submenu.appendChild(submenuItems);
                         menuItemEl.appendChild(submenu);
-                        docTitleEl.setAttribute('data-has-children', 'true');
-                        docTitleEl.setAttribute('data-path', childDoc.path || '/');
-                        docTitleEl.setAttribute('data-box', box);
-                        docTitleEl.setAttribute('data-loaded', 'false');
                     }
 
                     menuItemEl.addEventListener('click', (event: MouseEvent) => {
