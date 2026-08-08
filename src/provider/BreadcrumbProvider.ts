@@ -16,6 +16,7 @@ import { lang } from "@/utils/lang";
 import { getReadOnlyGSettings } from "@/manager/settingManager";
 import { saveMenuInstance, clearMenuInstance } from "@/worker/menuHelper";
 import * as siyuan from "siyuan";
+import { BreadcrumbContext } from "./IProvider";
 
 export class BreadcrumbProvider implements IBreadcrumbProvider {
     readonly id = "breadcrumb";
@@ -82,7 +83,9 @@ export class BreadcrumbProvider implements IBreadcrumbProvider {
     /** 创建根节点项 */
     private createRootItem(pathObjects: IPathObject[]): HTMLElement {
         const item = document.createElement("span");
-        item.className = "protyle-breadcrumb__item fake-breadcrumb-click";
+        // 根节点不可点击：去掉 fake-breadcrumb-click，改用 og-fake-doc-breadcrumb-root
+        // og-fdb-not-clickable 用于统一标记不可点击项（CSS 去除 hover / pointer 态）
+        item.className = "protyle-breadcrumb__item og-fake-doc-breadcrumb-root og-fdb-not-clickable";
         item.setAttribute("data-menu", "true");
         item.setAttribute("data-og-doc-node-id", "");
         item.setAttribute("data-og-type", "ROOT");
@@ -93,8 +96,9 @@ export class BreadcrumbProvider implements IBreadcrumbProvider {
 
         const textSpan = document.createElement("span");
         textSpan.className = "protyle-breadcrumb__text";
-        textSpan.setAttribute("title", lang("workspace"));
-        textSpan.textContent = lang("root");
+        // 显示为 / 且不提供点击提示（根不可点击）
+        textSpan.setAttribute("title", "");
+        textSpan.textContent = "/ ";
         item.appendChild(textSpan);
         return item;
     }
@@ -102,7 +106,10 @@ export class BreadcrumbProvider implements IBreadcrumbProvider {
     /** 创建面包屑文档/笔记本项 */
     private createBreadcrumbItem(pathObject: IPathObject, nextId: string, setting: any): HTMLElement {
         const item = document.createElement("span");
-        item.className = "protyle-breadcrumb__item fake-breadcrumb-click";
+        // 笔记本项在「禁用笔记本文档」设置下不可点击
+        const clickable = !(pathObject.type === "NOTEBOOK" && !isNotebookDocEnabled());
+        // 笔记本项在「禁用笔记本文档」设置下不可点击，统一加 og-fdb-not-clickable 标记
+        item.className = "protyle-breadcrumb__item" + (clickable ? " fake-breadcrumb-click" : " og-fdb-not-clickable");
         item.setAttribute("data-og-doc-node-id", pathObject.id);
         item.setAttribute("data-og-type", pathObject.type);
         item.setAttribute("data-node-names", JSON.stringify([pathObject.name]));
@@ -227,16 +234,18 @@ export class BreadcrumbProvider implements IBreadcrumbProvider {
 
         // 点击 FILE 类型
         container.querySelectorAll(`.fake-breadcrumb-click[data-og-type="FILE"]`).forEach((elem) => {
-            elem.addEventListener("mouseup", (event) => this.clickBreadcrumbItemAgent("FILE", protyleElem, event));
+            elem.addEventListener("mouseup", (event) => this.clickBreadcrumbItemAgent("FILE", protyleElem, event as MouseEvent));
         });
-        // 点击 NOTEBOOK 类型
-        container.querySelectorAll(`.fake-breadcrumb-click[data-og-type="NOTEBOOK"]`).forEach((elem) => {
-            elem.addEventListener("mouseup", (event) => this.clickBreadcrumbItemAgent("NOTEBOOK", protyleElem, event));
-        });
+        // 点击 NOTEBOOK 类型（仅当启用笔记本文档时绑定）
+        if (isNotebookDocEnabled()) {
+            container.querySelectorAll(`.fake-breadcrumb-click[data-og-type="NOTEBOOK"]`).forEach((elem) => {
+                elem.addEventListener("mouseup", (event) => this.clickBreadcrumbItemAgent("NOTEBOOK", protyleElem, event as MouseEvent));
+            });
+        }
         // 点击 ROOT 类型
-        container.querySelectorAll(`.fake-breadcrumb-click[data-og-type="ROOT"]`).forEach((elem) => {
-            elem.addEventListener("mouseup", (event) => this.clickBreadcrumbItemAgent("ROOT", protyleElem, event));
-        });
+        // container.querySelectorAll(`.fake-breadcrumb-click[data-og-type="ROOT"]`).forEach((elem) => {
+        //     elem.addEventListener("mouseup", (event) => this.clickBreadcrumbItemAgent("ROOT", protyleElem, event));
+        // });
         // 点击折叠区域
         container.querySelectorAll(`.fake-breadcrumb-click[data-og-type="..."]`).forEach((elem) => {
             elem.addEventListener("click", (event) => this.openHideMenu(protyleElem, event));
@@ -345,7 +354,8 @@ export class BreadcrumbProvider implements IBreadcrumbProvider {
             rect = (currentTarget.nextElementSibling as HTMLElement).getBoundingClientRect();
         }
 
-        if (!isValidStr(id)) return;
+        // ROOT 类型（根节点后的展开箭头）的 data-parent-id 为空，无需 id，直接走笔记本列表分支
+        if (type !== "ROOT" && !isValidStr(id)) return;
 
         // 检查并关闭上一个菜单
         if (clearMenuInstance(id)) {

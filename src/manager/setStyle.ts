@@ -47,6 +47,16 @@ export function setStyle() {
     .og-fake-doc-breadcrumb-container .protyle-breadcrumb__item[data-og-type="NOTEBOOK"] {
         ${isNotebookDocEnabled() ? '' : 'cursor: default;'};
     }
+    /* 不可点击的项（根节点 / 禁用笔记本文档时的笔记本层级）：去除指针与悬停高亮 */
+    .og-fake-doc-breadcrumb-container .protyle-breadcrumb__item.og-fake-doc-breadcrumb-root,
+    .og-fake-doc-breadcrumb-container .protyle-breadcrumb__item.og-fdb-not-clickable {
+        cursor: default !important;
+    }
+    .og-fake-doc-breadcrumb-container .protyle-breadcrumb__item.og-fake-doc-breadcrumb-root:hover,
+    .og-fake-doc-breadcrumb-container .protyle-breadcrumb__item.og-fdb-not-clickable:hover {
+        background: transparent !important;
+        cursor: default !important;
+    }
     .og-fdb-menu-emojitext, .og-fdb-menu-emojipic {
         align-self: center;
         height: 14px;
@@ -89,7 +99,9 @@ export function setStyle() {
         flex: 0 1 auto;
         min-width: 0;
     }
-    .og-fake-doc-breadcrumb-arrow-span[data-og-type=FILE], .og-fake-doc-breadcrumb-arrow-span[data-og-type=NOTEBOOK] {
+    .og-fake-doc-breadcrumb-arrow-span[data-og-type=FILE],
+    .og-fake-doc-breadcrumb-arrow-span[data-og-type=NOTEBOOK],
+    .og-fake-doc-breadcrumb-arrow-span[data-og-type=ROOT] {
         cursor: pointer;
     }
     .og-fake-doc-breadcrumb-arrow-span {
