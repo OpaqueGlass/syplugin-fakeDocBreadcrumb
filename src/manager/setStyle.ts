@@ -76,7 +76,18 @@ export function setStyle() {
         padding-bottom: 0px;
     }
     .${CONSTANTS.CONTAINER_CLASS_NAME} {
-        display: block !important;
+        display: flex !important;
+        align-items: center;
+        flex-wrap: nowrap;
+        gap: 4px;
+    }
+    .og-fake-doc-breadcrumb-container > .og-fake-doc-breadcrumb-spacer {
+        flex: 1 1 auto;
+        min-width: 0;
+    }
+    .og-fake-doc-breadcrumb-container > .protyle-breadcrumb__bar {
+        flex: 0 1 auto;
+        min-width: 0;
     }
     .og-fake-doc-breadcrumb-arrow-span[data-og-type=FILE], .og-fake-doc-breadcrumb-arrow-span[data-og-type=NOTEBOOK] {
         cursor: pointer;

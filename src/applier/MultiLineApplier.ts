@@ -13,17 +13,16 @@ export class MultiLineApplier extends BreadcrumbApplier {
     }
 
     protected async assembleContainer(container: HTMLElement, context: BreadcrumbContext): Promise<void> {
-        // BreadcrumbProvider 生成 barElement
+        // BreadcrumbProvider 生成 barElement（面包屑，靠左）
         const barElement = await this.providers[0].generate(context);
         if (barElement) {
             container.appendChild(barElement);
         }
-        // AdjacentDocProvider 生成 navElement，追加到容器内部（barElement 之后，中间加 space）
+        // AdjacentDocProvider 生成 navElement（上一篇/下一篇，靠右）
         const navElement = await this.providers[1].generate(context);
         if (navElement) {
-            const space = document.createElement("span");
-            space.classList.add("protyle-breadcrumb__space", "og-fdb-adjacent-doc-nav-space-before");
-            container.appendChild(space);
+            // 中间动态间隔：撑开空白，把 nav 推到最右（替代原 protyle-breadcrumb__space）
+            container.appendChild(this.createSpacer());
             container.appendChild(navElement);
         }
     }

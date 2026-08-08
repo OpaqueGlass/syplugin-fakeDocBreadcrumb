@@ -13,15 +13,17 @@ export class SingleLineApplier extends BreadcrumbApplier {
     }
 
     protected async assembleContainer(container: HTMLElement, context: BreadcrumbContext): Promise<void> {
-        // BreadcrumbProvider 生成 barElement
+        // BreadcrumbProvider 生成 barElement（面包屑，靠左）
         const barElement = await this.providers[0].generate(context);
         if (barElement) {
             container.appendChild(barElement);
         }
-        // AdjacentDocProvider 生成 navElement，追加到 barElement 内部（同一行）
+        // AdjacentDocProvider 生成 navElement（上一篇/下一篇，靠右）
         const navElement = await this.providers[1].generate(context);
-        if (navElement && barElement) {
-            barElement.appendChild(navElement);
+        if (navElement) {
+            // 中间动态间隔：撑开空白，把 nav 推到最右
+            container.appendChild(this.createSpacer());
+            container.appendChild(navElement);
         }
     }
 

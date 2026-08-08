@@ -39,6 +39,13 @@ export abstract class BreadcrumbApplier {
         return container;
     }
 
+    /** 创建动态间隔元素：占满 bar 与 nav 之间的剩余空间，把 nav 推到最右 */
+    protected createSpacer(): HTMLElement {
+        const spacer = document.createElement("div");
+        spacer.className = "og-fake-doc-breadcrumb-spacer";
+        return spacer;
+    }
+
     /** 移除旧面包屑 */
     protected removeOldBreadcrumb(protyleElement: HTMLElement): void {
         const oldElem = protyleElement.querySelector(`.${CONSTANTS.CONTAINER_CLASS_NAME}`);
