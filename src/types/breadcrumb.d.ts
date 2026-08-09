@@ -4,6 +4,11 @@
 
 import type { IProtyle } from "siyuan";
 
+export {};
+
+// START global
+declare global {
+
 /** 路径层级对象 */
 interface IPathObject {
     name: string;
@@ -83,4 +88,7 @@ interface IProtyleEnvInfo {
     originProtyle: IProtyle;
     showAll: boolean;
     popOver: boolean;
+}
+
+// END global
 }

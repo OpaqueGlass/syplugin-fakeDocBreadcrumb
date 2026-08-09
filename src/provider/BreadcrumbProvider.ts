@@ -5,16 +5,15 @@
  */
 
 import { CONSTANTS } from "@/constants";
-import { debugPush, errorPush, warnPush } from "@/logger";
-import { getEmojiElement, getEmojiHtmlStr, trimListDocsByPathAPIReturnedDocName } from "@/utils/onlyThisUtil";
-import { isValidStr } from "@/utils/commonCheck";
-import { isNotebookDocEnabled, isNotebookDoc, getListDocsByPathAPIFilePath } from "@/utils/compatUtils";
-import { getDocInfo, listDocsByPathT, getNotebookInfoLocallyF, getHPathById, getNodebookList, createDocWithPath } from "@/syapi";
-import { isChildDocExist } from "@/syapi/custom";
-import { openRefLinkByAPI } from "@/utils/common";
-import { lang } from "@/utils/lang";
+import { errorPush } from "@/logger";
 import { getReadOnlyGSettings } from "@/manager/settingManager";
-import { saveMenuInstance, clearMenuInstance, readFromWnd } from "@/worker/menuHelper";
+import { createDocWithPath, getNodebookList, listDocsByPathT } from "@/syapi";
+import { openRefLinkByAPI } from "@/utils/common";
+import { isValidStr } from "@/utils/commonCheck";
+import { isNotebookDocEnabled } from "@/utils/compatUtils";
+import { lang } from "@/utils/lang";
+import { getEmojiElement, getEmojiHtmlStr, trimListDocsByPathAPIReturnedDocName } from "@/utils/onlyThisUtil";
+import { clearMenuInstance, readFromWnd, saveMenuInstance } from "@/worker/menuHelper";
 import * as siyuan from "siyuan";
 import { BreadcrumbContext } from "./IProvider";
 
@@ -518,6 +517,7 @@ export class BreadcrumbProvider implements IBreadcrumbProvider {
                     event.stopImmediatePropagation();
                     event.stopPropagation();
                     this.createAndOpenEmptyDocAt(box, path);
+                    clearMenuInstance(null);
                 });
 
                 for (const childDoc of childDocs) {
@@ -580,9 +580,6 @@ export class BreadcrumbProvider implements IBreadcrumbProvider {
                     }
 
                     menuItemEl.addEventListener('click', (event: MouseEvent) => {
-                        event.preventDefault();
-                        event.stopImmediatePropagation();
-                        event.stopPropagation();
                         openRefLinkByAPI({
                             paramDocId: childDoc.id,
                             keyParam: {
@@ -592,6 +589,7 @@ export class BreadcrumbProvider implements IBreadcrumbProvider {
                                 metaKey: event.metaKey,
                             },
                         });
+                        clearMenuInstance(null);
                     });
 
                     submenuContainer.appendChild(menuItemEl);

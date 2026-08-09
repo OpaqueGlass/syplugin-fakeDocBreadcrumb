@@ -36,7 +36,12 @@ export function removeTopExistCache() {
     (window as any)[WND_KEY]["topElement"] = null;
 }
 
-export function clearMenuInstance(id: string): boolean {
+/**
+ * 
+ * @param id 要清除的菜单id，为null则任意匹配
+ * @returns 是否存在相同的菜单实例并已关闭
+ */
+export function clearMenuInstance(id: string | null): boolean {
     if (!testTempStorage()) {
         return false;
     }
@@ -44,7 +49,7 @@ export function clearMenuInstance(id: string): boolean {
     if (store["recentMenu"]) {
         const tempId = store["recentMenu"]["id"];
         // 存在相同的菜单，仅关闭，不重新打开
-        if (tempId === id && document.querySelector("#commonMenu[data-name='og-fdb-relative-menu']")) {
+        if ((tempId === id || id === null) && document.querySelector("#commonMenu[data-name='og-fdb-relative-menu']")) {
             store["recentMenu"]["menu"]?.close();
             store["recentMenu"] = null;
             return true;
