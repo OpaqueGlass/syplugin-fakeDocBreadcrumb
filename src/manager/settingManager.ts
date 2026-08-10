@@ -69,7 +69,6 @@ export function initSettingProperty() {
                 new ConfigProperty({"key": "nameMaxLength", "type": "NUMBER", "min": 1, "max": 200}),
             ],
             "behavior": [
-                new ConfigProperty({"key": "timelyUpdate", "type": "SWITCH"}),
                 new ConfigProperty({"key": "immediatelyUpdate", "type": "SWITCH"}),
                 new ConfigProperty({"key": "allowFloatWindow", "type": "SWITCH"}),
                 new ConfigProperty({"key": "swapClickFunction", "type": "SWITCH"}),

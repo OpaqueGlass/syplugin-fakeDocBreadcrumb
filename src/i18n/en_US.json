@@ -22,7 +22,7 @@
     "setting_oneLineBreadcrumb_name": "Single Line Breadcrumb",
     "setting_oneLineBreadcrumb_desp": "Display breadcrumb on the same line as SiYuan native block breadcrumb",
     "setting_usePluginArrow_name": "Use Plugin Arrow",
-    "setting_usePluginArrow_desp": "Use plugin-provided arrow style instead of SiYuan native arrow",
+    "setting_usePluginArrow_desp": "Use native arrow style `&g;` instead of theme custom `/` to ensure the arrows in breadcrumbs are clickable.",
     "setting_icon_name": "Icon Display",
     "setting_icon_desp": "Set icon display mode in breadcrumb",
     "setting_icon_option_0": "None",
@@ -70,9 +70,9 @@
     "setting_docMaxNum_name": "Max Doc Count",
     "setting_docMaxNum_desp": "Maximum number of documents to show in menu",
     "setting_aboutAuthor_name": "About",
-    "setting_aboutAuthor_desp": "Document Breadcrumb plugin - Display full document path breadcrumb at the top of SiYuan documents",
+    "setting_aboutAuthor_desp": "Author: <a target='_blank' href='https://github.com/OpaqueGlass'>OpaqueGlass</a>;<br/>Issue reports & sponsorship: <a target='_blank' href='https://github.com/OpaqueGlass/syplugin-fakeDocBreadcrumb'>GitHub</a>;<br/>This plugin is licensed under <a target='_blank' href='https://www.gnu.org/licenses/agpl-3.0.html'>AGPLv3</a>.",
     "setting_settingIconTips_name": "Settings Tips",
-    "setting_settingIconTips_desp": "You can adjust breadcrumb display and behavior parameters in the settings panel",
+    "setting_settingIconTips_desp": "🔄 indicates that the meaning or effect of the setting has changed in the latest version. Please read the changelog(written in Chinese)to understand the changes and any necessary adjustments you may need to make.<br/>🆕 indicates a newly added setting in the latest version. Please read the changelog(written in Chinese) to learn about the new feature.<br/>🧪 or 🚧 indicates an experimental feature. The developer will make efforts to maintain it, but it may be removed if there are unresolvable issues.<br/>🚅 indicates a feature in public beta testing. When a feature has passed a small-scale test, it will be marked as such (although there may not have been many testers, so its reliability is unknown).<br/>⛔ indicates a legacy compatibility option that will be removed soon.",
     "setting_debugMode_name": "Debug Mode",
     "setting_debugMode_desp": "Enable detailed debug output",
     "setting_experimental": "[Experimental] ",
@@ -80,5 +80,6 @@
     "setting_deprecated": "[Deprecated] ",
     "settingpage_general_name": "General",
     "settingpage_settingave_name": "Settings Save",
-    "settingpage_about_name": "About"
+    "settingpage_about_name": "About",
+    "option_modified": "<code class=\"fn__code\">Modified (Non-Default)</code>"
 }
