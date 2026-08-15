@@ -73,6 +73,8 @@
     "setting_aboutAuthor_desp": "Author: <a target='_blank' href='https://github.com/OpaqueGlass'>OpaqueGlass</a>;<br/>Issue reports & sponsorship: <a target='_blank' href='https://github.com/OpaqueGlass/syplugin-fakeDocBreadcrumb'>GitHub</a>;<br/>This plugin is licensed under <a target='_blank' href='https://www.gnu.org/licenses/agpl-3.0.html'>AGPLv3</a>.",
     "setting_settingIconTips_name": "Settings Tips",
     "setting_settingIconTips_desp": "🔄 indicates that the meaning or effect of the setting has changed in the latest version. Please read the changelog(written in Chinese)to understand the changes and any necessary adjustments you may need to make.<br/>🆕 indicates a newly added setting in the latest version. Please read the changelog(written in Chinese) to learn about the new feature.<br/>🧪 or 🚧 indicates an experimental feature. The developer will make efforts to maintain it, but it may be removed if there are unresolvable issues.<br/>🚅 indicates a feature in public beta testing. When a feature has passed a small-scale test, it will be marked as such (although there may not have been many testers, so its reliability is unknown).<br/>⛔ indicates a legacy compatibility option that will be removed soon.",
+
+    "nothingToDisplay": "No title levels to display",
     "setting_debugMode_name": "Debug Mode",
     "setting_debugMode_desp": "Enable detailed debug output",
     "setting_experimental": "[Experimental] ",

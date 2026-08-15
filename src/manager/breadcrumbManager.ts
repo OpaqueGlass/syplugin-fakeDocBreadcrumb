@@ -17,6 +17,8 @@ import { ApplierFactory } from "@/applier/ApplierFactory";
 import { clearMenuInstance, saveMenuInstance } from "@/worker/menuHelper";
 import { getPluginInstance } from "@/utils/getInstance";
 import * as siyuan from "siyuan";
+import { showPluginMessage } from "@/utils/common";
+import { lang } from "@/utils/lang";
 
 export class BreadcrumbManager {
     private providers: IBreadcrumbProvider[];
@@ -289,7 +291,7 @@ export class BreadcrumbManager {
             // 获取文档大纲
             const outlineData = await getDocOutlineAPI(docId);
             if (outlineData == null) {
-                siyuan.showMessage(window.siyuan.languages.nothingToDisplay + "--- fakeDocBreadcrumb");
+                showPluginMessage(lang("nothingToDisplay"));
                 return;
             }
 
@@ -321,7 +323,7 @@ export class BreadcrumbManager {
                     menuItems = parentHeading.blocks || parentHeading.children || [];
                 }
             } else {
-                siyuan.showMessage(window.siyuan.languages.nothingToDisplay + "--- fakeDocBreadcrumb");
+                showPluginMessage(lang("nothingToDisplay"));
                 return;
             }
 
@@ -385,7 +387,7 @@ export class BreadcrumbManager {
 
                 saveMenuInstance(tempMenu, "bid_" + nodeId);
             } else {
-                siyuan.showMessage(window.siyuan.languages.nothingToDisplay + "--- fakeDocBreadcrumb");
+                showPluginMessage(lang("nothingToDisplay"));
             }
         } catch (error) {
             errorPush("获取或处理大纲数据时出错:", error);

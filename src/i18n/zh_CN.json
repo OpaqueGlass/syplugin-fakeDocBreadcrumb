@@ -80,6 +80,8 @@
     "settingpage_settingave_name": "设置项保存",
     "settingpage_about_name": "关于",
 
+    "nothingToDisplay": "无标题层级可显示",
+
     "option_modified": "<code class=\"fn__code\">已修改（非默认值）</code>",
     "settingpage_breadcrumb_name": "通用",
     "settingpage_advanced_name": "高级"
