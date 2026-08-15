@@ -55,6 +55,8 @@
     "setting_showAdjacentDocButton_option_1_desp": "Navigate between docs under the same parent",
     "setting_showAdjacentDocButton_option_2": "Same Level",
     "setting_showAdjacentDocButton_option_2_desp": "Navigate between all docs at the same level (cross-level)",
+    "setting_simplifyAdjacentDocButton_name": "Simplify Adjacent Doc Buttons",
+    "setting_simplifyAdjacentDocButton_desp": "Show only direction labels (Previous/Next) without document names, with both buttons equal in width",
     "setting_menuKeepCurrentVisible_name": "Keep Current Visible",
     "setting_menuKeepCurrentVisible_desp": "Auto-scroll to current document position when menu opens",
     "setting_menuExtendSubDocDepth_name": "Menu Sub-doc Depth",

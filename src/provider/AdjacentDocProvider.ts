@@ -26,6 +26,9 @@ export class AdjacentDocProvider implements IBreadcrumbProvider {
         const adjacentDocs = await this.getAdjacentDocs(context.pathObjects, context.notebookDocFlag, setting);
         const navElement = document.createElement("span");
         navElement.className = "og-fdb-doc-nav";
+        if (setting.simplifyAdjacentDocButton) {
+            navElement.classList.add("og-fdb-doc-nav--equal");
+        }
         navElement.appendChild(this.createNavButton("previous", adjacentDocs.previousDoc, adjacentDocs.sameLevelPrevious, setting));
         navElement.appendChild(this.createNavButton("next", adjacentDocs.nextDoc, adjacentDocs.sameLevelNext, setting));
         return navElement;
@@ -43,10 +46,12 @@ export class AdjacentDocProvider implements IBreadcrumbProvider {
         let buttonText = label;
         if (doc?.id) {
             const docName = trimListDocsByPathAPIReturnedDocName(doc?.name ?? "");
-            buttonText = docName;
             button.setAttribute("data-doc-id", doc.id);
             button.setAttribute("data-og-doc-title", docName);
             button.setAttribute("title", `${label}: ${docName}`);
+            if (!setting.simplifyAdjacentDocButton) {
+                buttonText = docName;
+            }
         } else {
             button.disabled = true;
             button.setAttribute("title", label);

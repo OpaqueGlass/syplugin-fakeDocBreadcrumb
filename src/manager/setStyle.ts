@@ -180,6 +180,15 @@ export function setStyle() {
         cursor: not-allowed;
         opacity: 0.35;
     }
+    .og-fdb-doc-nav.og-fdb-doc-nav--equal {
+        flex: 1 1 auto;
+        max-width: 200px;
+    }
+    .og-fdb-doc-nav.og-fdb-doc-nav--equal .og-fdb-doc-nav-button {
+        flex: 1 1 0;
+        min-width: 0;
+        max-width: none;
+    }
     .og-fake-doc-breadcrumb-container.protyle-breadcrumb>.protyle-breadcrumb__bar .protyle-breadcrumb__item:first-child::before {
         content: "";
         margin-right: 0px;

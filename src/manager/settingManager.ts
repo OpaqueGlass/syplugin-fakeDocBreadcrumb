@@ -38,6 +38,7 @@ const defaultSetting: any = {
     swapClickFunction: false,
     showRoot: false,
     showAdjacentDocButton: "2",
+    simplifyAdjacentDocButton: false,
     autoFixFocusError: false,
     createDocBtnInMenu: false,
     debugMode: false,
@@ -76,6 +77,7 @@ export function initSettingProperty() {
             ],
             "adjacentDoc": [
                 new ConfigProperty({"key": "showAdjacentDocButton", "type": "SELECT", "options": ["0", "1", "2"]}),
+                new ConfigProperty({"key": "simplifyAdjacentDocButton", "type": "SWITCH"}),
             ],
             "menu": [
                 new ConfigProperty({"key": "menuKeepCurrentVisible", "type": "SWITCH"}),
