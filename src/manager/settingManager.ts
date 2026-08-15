@@ -88,7 +88,6 @@ export function initSettingProperty() {
         new TabProperty({"key": "advanced", "iconKey": "iconSettings", props: [
             new ConfigProperty({"key": "notOnlyOpenDocs", "type": "SWITCH"}),
             new ConfigProperty({"key": "preferOpenInCurrentSplit", "type": "SWITCH"}),
-            new ConfigProperty({"key": "autoFixFocusError", "type": "SWITCH"}),
             new ConfigProperty({"key": "docMaxNum", "type": "NUMBER", "min": 0, "max": 1024}),
         ]}),
         new TabProperty({"key": "about", "iconKey": "iconInfo", props: [
