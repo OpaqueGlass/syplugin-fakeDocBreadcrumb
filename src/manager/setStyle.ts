@@ -33,12 +33,12 @@ export function setStyle() {
         position: relative;
     }
     .og-breadcrumb-oneline-divider {
-        background-color: var(--b3-theme-on-surface-light);
+        background-color: var(--b3-theme-on-surface-lighter);
         flex-shrink: 0;
         align-self: stretch;
         margin: 4px;
         width: 1px;
-        height: 80%;
+        height: 60%;
         align-self: center;
     }
     .og-breadcrumb-oneline + .protyle-breadcrumb__bar {

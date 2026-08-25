@@ -44,6 +44,8 @@ export default class FakeDocBreadcrumbPlugin extends Plugin {
         loadSettings().then(() => {
             this.myEventHandler.bindHandler();
             setStyle();
+            // 插件启用时对当前所有显示中的文档显式补跑一次插入
+            this.myEventHandler.getBreadcrumbManager().refreshAllOpenDocs();
         }).catch((e) => {
             showMessage("Load plugin settings failed." + this.name);
             errorPush(e);
