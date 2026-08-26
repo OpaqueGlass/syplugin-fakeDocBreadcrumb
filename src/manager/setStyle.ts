@@ -22,6 +22,14 @@ export function setStyle() {
     }
     `;
 
+    // 隐藏原生块面包屑：仅在「单行面包屑」(oneLineBreadcrumb) 开启时才有意义，
+    // 因为原生面包屑的隐藏依赖 .og-breadcrumb-oneline 容器类与分隔线元素。
+    const styleForHideNativeBreadcrumb = (g_setting.hideNativeBreadcrumb && g_setting.oneLineBreadcrumb) ? `
+    .og-breadcrumb-oneline ~ .protyle-breadcrumb__bar, .og-breadcrumb-oneline-divider, .og-breadcrumb-oneline ~ .protyle-breadcrumb__bar ~ .protyle-breadcrumb__space {
+        display: none;
+    }
+    ` : ``;
+
     style.innerHTML = `
     .og-breadcrumb-oneline {
         margin-right: 3px;
@@ -197,6 +205,7 @@ export function setStyle() {
         max-width: min(112px, 12em, 15vw);
     }
     ${styleForv3_7_0}
+    ${styleForHideNativeBreadcrumb}
     `;
     head.appendChild(style);
 }

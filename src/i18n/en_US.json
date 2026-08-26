@@ -21,6 +21,8 @@
     "setting_showRoot_desp": "Show workspace root in breadcrumb",
     "setting_oneLineBreadcrumb_name": "Single Line Breadcrumb",
     "setting_oneLineBreadcrumb_desp": "Display breadcrumb on the same line as SiYuan native block breadcrumb",
+    "setting_hideNativeBreadcrumb_name": "🧪Hide Native Block Breadcrumb",
+    "setting_hideNativeBreadcrumb_desp": "Hide SiYuan's native block breadcrumb. Requires \"Single Line Breadcrumb\" to be enabled to take effect. Not recommended: SiYuan updates may change the breadcrumb's behavior and rendering, which can break this option or cause unexpected issues.",
     "setting_usePluginArrow_name": "Use Plugin Arrow",
     "setting_usePluginArrow_desp": "Use native arrow style `&g;` instead of theme custom `/` to ensure the arrows in breadcrumbs are clickable.",
     "setting_icon_name": "Icon Display",

@@ -21,6 +21,8 @@
     "setting_showRoot_desp": "在面包屑中显示工作区根节点",
     "setting_oneLineBreadcrumb_name": "单行面包屑",
     "setting_oneLineBreadcrumb_desp": "面包屑与思源原生块面包屑在同一行显示",
+    "setting_hideNativeBreadcrumb_name": "🧪隐藏原生块面包屑",
+    "setting_hideNativeBreadcrumb_desp": "隐藏思源原生的块面包屑。必须启用「单行面包屑」才能生效。不建议启用：思源版本更新可能会变更面包屑的行为与展示方式，导致本项失效或产生异常。",
     "setting_usePluginArrow_name": "使用插件箭头样式",
     "setting_usePluginArrow_desp": "使用原生箭头样式`&gt;`，而非主题自定义的`/`，以确保面包屑中的箭头能够点击",
     "setting_icon_name": "图标显示",
