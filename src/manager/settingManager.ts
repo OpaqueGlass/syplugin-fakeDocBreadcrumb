@@ -19,7 +19,8 @@ let setting: any = ref({});
 
 const defaultSetting: any = {
     "@version": 20260705,
-    nameMaxLength: 15,
+    nameMaxLength: 15,          // 菜单文档名最大长度（字符数）
+    breadcrumbNameMaxLength: 0, // 面包屑文档名最大长度（em，0 = 自适应）
     docMaxNum: 128,
     showNotebook: true,
     typeHide: false,
@@ -65,11 +66,11 @@ export function initSettingProperty() {
                 new ConfigProperty({"key": "hideNativeBreadcrumb", "type": "SWITCH"}),
                 new ConfigProperty({"key": "usePluginArrow", "type": "SWITCH"}),
                 new ConfigProperty({"key": "icon", "type": "SELECT", "options": ["0", "1", "2"]}),
+                new ConfigProperty({"key": "breadcrumbNameMaxLength", "type": "NUMBER", "min": 0, "max": 40}),
             ],
             "fold": [
                 new ConfigProperty({"key": "foldedFrontShow", "type": "NUMBER", "min": 0, "max": 50}),
                 new ConfigProperty({"key": "foldedEndShow", "type": "NUMBER", "min": 0, "max": 50}),
-                new ConfigProperty({"key": "nameMaxLength", "type": "NUMBER", "min": 1, "max": 200}),
             ],
             "behavior": [
                 new ConfigProperty({"key": "immediatelyUpdate", "type": "SWITCH"}),
@@ -85,6 +86,7 @@ export function initSettingProperty() {
                 new ConfigProperty({"key": "menuKeepCurrentVisible", "type": "SWITCH"}),
                 new ConfigProperty({"key": "menuExtendSubDocDepth", "type": "NUMBER", "min": 0, "max": 10}),
                 new ConfigProperty({"key": "createDocBtnInMenu", "type": "SWITCH"}),
+                new ConfigProperty({"key": "nameMaxLength", "type": "NUMBER", "min": 1, "max": 40}),
             ],
         }}),
         new TabProperty({"key": "advanced", "iconKey": "iconSettings", props: [

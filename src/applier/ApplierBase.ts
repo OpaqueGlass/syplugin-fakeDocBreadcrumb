@@ -4,7 +4,8 @@
  */
 
 import { CONSTANTS } from "@/constants";
-import { debugPush } from "@/logger";
+import { debugPush, logPush } from "@/logger";
+import { getReadOnlyGSettings } from "@/manager/settingManager";
 
 export abstract class BreadcrumbApplier {
     protected providers: IBreadcrumbProvider[];
@@ -50,11 +51,16 @@ export abstract class BreadcrumbApplier {
         }
     }
 
-    /** 宽度溢出调整 */
+    /** 宽度溢出调整
+     * 
+     * [container] 容器元素，其中第一个应当是 .protyle-breadcrumb__bar 元素
+     */
     protected adjustOverflow(container: HTMLElement): void {
         let isAdjustFinished = false;
         const itemElements = container.querySelectorAll(".protyle-breadcrumb__item ");
-        while (container.scrollHeight > 30 && !isAdjustFinished && itemElements.length > 2) {
+        // 魔法数字嗷，用于判断是否折行溢出
+        while (container.scrollHeight > 42 && !isAdjustFinished && itemElements.length > 2) {
+            debugPush("BreadcrumbApplier", "面包屑宽度溢出，尝试调整");
             [].find.call(itemElements, ((item: HTMLElement, index: number) => {
                 if (index > 0) {
                     if (!item.classList.contains("og-fake-doc-breadcrumb-ellipsis")) {
@@ -67,6 +73,8 @@ export abstract class BreadcrumbApplier {
                 }
             }));
         }
+        // 因为要先判断折行溢出，所以后面添加的 nowrap
+        // 注意，provider或提供的container顺序如果有问题，这里可能会设定到错误的元素，需要考虑
         const firstChild = container.firstChild as HTMLElement;
         if (firstChild) {
             firstChild.classList.add("protyle-breadcrumb__bar--nowrap");

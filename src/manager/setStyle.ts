@@ -22,6 +22,12 @@ export function setStyle() {
     }
     `;
 
+    // 面包屑文档名最大长度（em）：0 表示沿用自适应宽度，
+    const breadcrumbNameMaxLength = Number(g_setting?.breadcrumbNameMaxLength) || 0;
+    const styleForEllipsisMaxWidth = breadcrumbNameMaxLength > 0
+        ? `${breadcrumbNameMaxLength}em`
+        : `min(112px, 12em, 15vw)`;
+
     // 隐藏原生块面包屑：仅在「单行面包屑」(oneLineBreadcrumb) 开启时才有意义，
     // 因为原生面包屑的隐藏依赖 .og-breadcrumb-oneline 容器类与分隔线元素。
     const styleForHideNativeBreadcrumb = (g_setting.hideNativeBreadcrumb && g_setting.oneLineBreadcrumb) ? `
@@ -202,7 +208,7 @@ export function setStyle() {
         margin-right: 0px;
     }
     .og-fake-doc-breadcrumb-ellipsis {
-        max-width: min(112px, 12em, 15vw);
+        max-width: ${styleForEllipsisMaxWidth};
     }
     ${styleForv3_7_0}
     ${styleForHideNativeBreadcrumb}
