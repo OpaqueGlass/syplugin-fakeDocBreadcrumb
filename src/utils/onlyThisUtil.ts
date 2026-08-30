@@ -1,9 +1,11 @@
-import { debugPush, errorPush, logPush } from "@/logger";
+import { debugPush, debugWarnPush, errorPush, logPush, warnPush } from "@/logger";
 import { DOC_SORT_TYPES, getblockAttr, getCurrentDocIdF, isMobile, queryAPI } from "@/syapi";
 import { IProtyle } from "siyuan";
 import * as siyuanAPIs from "siyuan";
 import { isCurrentVersionLessThan, isValidStr } from "./commonCheck";
 import { openRefLinkByAPI } from "./common";
+import { getSiyuanBaseConfig } from "@/syapi/commonApiWrapper";
+import { CONSTANTS } from "@/constants";
 
 export function getProtyleInfo(protyle: IProtyle):IProtyleEnvInfo {
     let result:IProtyleEnvInfo = {
@@ -101,27 +103,151 @@ export function getListItemEmojiHtmlStr(iconString:string, hasChild:boolean) {
     }
 }
 
-export function emojiIconHandler(iconString:string, hasChild = false) {
-    if (!isValidStr(iconString)) {
-        if (window.siyuan.storage["local-images"]) {
-            if (hasChild) {
-                return emojiIconHandler(window.siyuan.storage["local-images"].folder, hasChild);
-            } else {
-                return emojiIconHandler(window.siyuan.storage["local-images"].file, hasChild);
-            }
-        }
-        return hasChild ? "📑" : "📄";
+/**
+ * 通过 iconXxx 获取SVG element
+ * @param svgIconHref 
+ * @returns 
+ */
+function getSvgElement(svgIconHref: string): SVGSVGElement {
+    if (!svgIconHref.startsWith("icon")) {
+        debugWarnPush("getSvgElemetn: ", "svgIconHref 不合法, 原始值为", svgIconHref);
     }
-    //确定是emojiIcon 再调用，printer自己加判断
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    const use = document.createElementNS("http://www.w3.org/2000/svg", "use");
+    use.setAttributeNS("http://www.w3.org/1999/xlink", "xlink:href", `#${svgIconHref}`);
+    svg.appendChild(use);
+    return svg;
+}
+
+enum DocIconType {
+    NOTEBOOK,
+    PARENT_FILE,
+    FILE,
+}
+
+function isSvgIconAsDefaultEnabled(): string {
+    return getSiyuanBaseConfig().fileTree?.useSVGDefaultIcon ?? false;
+}
+
+function getDefaultSvgIcon(type: DocIconType): SVGSVGElement {
+    switch (type) {
+        case DocIconType.NOTEBOOK:
+            return getSvgElement("iconFilesRoot");
+        case DocIconType.PARENT_FILE:
+            return getSvgElement("iconFiles");
+        default:
+        case DocIconType.FILE:
+            return getSvgElement("iconFileText");
+    }
+}
+
+/**
+ * 获取默认EmojiIcon 字符串
+ * 不包括html结构
+ * @param hasChild 
+ * @returns 
+ */
+function getDefaultEmojiIcon(hasChild: boolean): string {
+    let result = null;
+    if (window.siyuan.storage["local-images"]) {
+        if (hasChild) {
+            result = unicodeToEmoji(window.siyuan.storage["local-images"].folder);
+        } else {
+            result = unicodeToEmoji(window.siyuan.storage["local-images"].file);
+        }
+    }
+    if (result != null) {
+        return result;
+    }
+    return hasChild ? "📑" : "📄";
+}
+
+/**
+ * 将unicode码转换为emojiIconStr
+ * @param unicodeStr 
+ * @returns 可空
+ */
+function unicodeToEmoji(unicodeStr: string): string {
     try {
         let result = "";
-        iconString.split("-").forEach(element => {
+        unicodeStr.split("-").forEach(element => {
             result += String.fromCodePoint(Number("0x" + element));
         });
         return result;
     } catch (err) {
-        errorPush("emoji处理时发生错误", iconString, err);
-        return hasChild ? "📑" : "📄";
+        errorPush("emoji处理时发生错误", unicodeStr, err);
+        return null;
+    }
+}
+
+/**
+ * 生成文档图标 HTMLElement 元素
+ * @param param0 
+ * @returns 
+ */
+function getDocIconElement({
+    iconString,
+    hasChild,
+    textClassName = "og-fdb-menu-emojitext",
+    picClassName = "og-fdb-menu-emojipic",
+    wrapText = true,
+    wrapBlank = true,
+    iconMode = CONSTANTS.ICON_CUSTOM_ONLY,
+    outerHtmlTag = ""
+} 
+    : {
+        iconString: string,
+        hasChild: boolean,
+        textClassName: string,
+        picClassName: string,
+        wrapText: boolean, // span 包装emoji文本
+        wrapBlank: boolean,// span 包装空值
+        iconMode: string,
+        outerHtmlTag: string, // 外部嵌套的容器tag，为null，则图片img，文字按照wrapText/wrapblank判断
+    }): HTMLElement {
+    let result: HTMLElement = outerHtmlTag == null ? null : document.createElement(outerHtmlTag);
+    let tempResult: HTMLElement = null;
+
+    // 根据类型判断
+    if (iconString.startsWith("api/icon/getDynamicIcon")) {
+        // 动态图标
+        let tempImgResult = document.createElement("img");
+        tempImgResult.src = `/${iconString}`;
+        tempImgResult.className = picClassName;
+        tempResult = tempImgResult;
+    } else if (iconString.indexOf(".") != -1) {
+        // 本地图标
+        let tempImgResult = document.createElement("img");
+        tempImgResult.src = `/emojis/${iconString}`;
+        tempImgResult.className = picClassName;
+        tempResult = tempImgResult;
+    } else if (isValidStr(iconString)) {
+        // unicode
+        let tempSpanResult = document.createElement("span");
+        tempSpanResult.className = textClassName;
+        tempSpanResult.textContent = unicodeToEmoji(iconString);
+        tempResult = tempSpanResult;
+    } else if (isSvgIconAsDefaultEnabled() && iconMode == CONSTANTS.ICON_ALL) {
+        //@ts-ignore
+        tempResult = getDefaultSvgIcon(hasChild ? DocIconType.PARENT_FILE : DocIconType.FILE);
+    } else if (iconMode == CONSTANTS.ICON_ALL) {
+        // 代码片段默认值
+        let tempSpanResult = document.createElement("span");
+        tempSpanResult.className = textClassName;
+        tempSpanResult.textContent = getDefaultEmojiIcon(hasChild);
+        tempResult = tempSpanResult;
+    } else if (wrapBlank && wrapText) {
+        // 空值也包装
+        let tempSpanResult = document.createElement("span");
+        tempSpanResult.className = textClassName;
+        tempResult = tempSpanResult;
+    }
+
+    if (result == null) {
+        return tempResult;
+    } else {
+        result.appendChild(tempResult);
+        return result;
     }
 }
 
@@ -143,36 +269,19 @@ export function getEmojiHtmlStr(
     picClassName: string = "og-fdb-menu-emojipic",
     wrapText: boolean = true,
     wrapBlank: boolean = true,
-    iconMode: number = 1
+    iconMode: string = CONSTANTS.ICON_CUSTOM_ONLY
 ): string {
-    if (iconMode === 0) return ``;
-    // 无emoji的处理
-    if (!isValidStr(iconString) && iconMode === 2) {
-        if (window.siyuan.storage["local-images"]) {
-            if (hasChild) {
-                return getEmojiHtmlStr(window.siyuan.storage["local-images"].folder, hasChild, textClassName, picClassName, wrapText, wrapBlank, iconMode);
-            } else {
-                return getEmojiHtmlStr(window.siyuan.storage["local-images"].file, hasChild, textClassName, picClassName, wrapText, wrapBlank, iconMode);
-            }
-        }
-        if (hasChild) {
-            return wrapText ? `<span class="${textClassName}">📑</span>` : "📑";
-        } else {
-            return wrapText ? `<span class="${textClassName}">📄</span>` : "📄";
-        }
-    }
-    if (!isValidStr(iconString) && iconMode === 1) {
-        return wrapBlank ? `<span class="${textClassName}"></span>` : "";
-    }
-    let result = iconString;
-    if (iconString.startsWith("api/icon/getDynamicIcon")) {
-        result = `<img class="${picClassName}" src="/${iconString}"/>`;
-    } else if (iconString.indexOf(".") != -1) {
-        result = `<img class="${picClassName}" src="/emojis/${iconString}"/>`;
-    } else {
-        result = wrapText ? `<span class="${textClassName}">${emojiIconHandler(iconString, hasChild)}</span>` : emojiIconHandler(iconString, hasChild);
-    }
-    return result;
+    if (iconMode === CONSTANTS.ICON_NONE) return ``;
+    return getDocIconElement({
+        iconString,
+        hasChild,
+        textClassName,
+        picClassName,
+        iconMode,
+        wrapText,
+        wrapBlank,
+        outerHtmlTag: null
+    })?.outerHTML ?? "";
 }
 
 /**
@@ -188,45 +297,19 @@ export function getEmojiElement(
     hasChild: boolean,
     textClassName: string = "og-fdb-bread-emojitext",
     picClassName: string = "og-fdb-bread-emojipic",
-    iconMode: number = 1
+    iconMode: string = CONSTANTS.ICON_CUSTOM_ONLY
 ): HTMLElement | null {
-    if (iconMode === 0) return null;
-    if (!isValidStr(iconString)) {
-        if (iconMode === 2) {
-            if (window.siyuan.storage["local-images"]) {
-                const fallbackIcon = hasChild
-                    ? window.siyuan.storage["local-images"].folder
-                    : window.siyuan.storage["local-images"].file;
-                return getEmojiElement(fallbackIcon, hasChild, textClassName, picClassName, iconMode);
-            }
-            const span = document.createElement("span");
-            span.className = textClassName;
-            span.textContent = hasChild ? "📑" : "📄";
-            return span;
-        }
-        if (iconMode === 1) {
-            const span = document.createElement("span");
-            span.className = textClassName;
-            return span;
-        }
-    }
-    if (iconString.startsWith("api/icon/getDynamicIcon")) {
-        const img = document.createElement("img");
-        img.className = picClassName;
-        img.src = `/${iconString}`;
-        return img;
-    } else if (iconString.indexOf(".") != -1) {
-        const img = document.createElement("img");
-        img.className = picClassName;
-        img.src = `/emojis/${iconString}`;
-        return img;
-    } else {
-        const span = document.createElement("span");
-        span.className = textClassName;
-        span.textContent = emojiIconHandler(iconString, hasChild);
-        return span;
-    }
-    return null;
+    if (iconMode === CONSTANTS.ICON_NONE) return null;
+    return getDocIconElement({
+        iconString,
+        hasChild,
+        textClassName,
+        picClassName,
+        iconMode,
+        outerHtmlTag: null,
+        wrapText: true,
+        wrapBlank: false
+    });
 }
 
 /**

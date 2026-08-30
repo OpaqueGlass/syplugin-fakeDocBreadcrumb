@@ -57,3 +57,9 @@ export function warnPush(str: string, ... args: any[]) {
         console.warn(`${g_FULLNAME}[W] ${new Date().toLocaleTimeString()} ${str}`, ...args);
     }
 }
+
+export function debugWarnPush(str: string, ... args: any[]) {
+    if (isDebugMode()) {
+        console.warn(`${g_FULLNAME}[W] ${new Date().toLocaleTimeString()} ${str}`, ...args);
+    }
+}

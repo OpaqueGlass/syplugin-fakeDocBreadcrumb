@@ -18,9 +18,9 @@ export class CONSTANTS {
     public static readonly MENU_CURRENT_DOC_CLASS_NAME = "og-fdb-current-doc-in-menu";
 
     // 图标模式
-    public static readonly ICON_NONE = 0;
-    public static readonly ICON_CUSTOM_ONLY = 1;
-    public static readonly ICON_ALL = 2;
+    public static readonly ICON_NONE = "0";
+    public static readonly ICON_CUSTOM_ONLY = "1";
+    public static readonly ICON_ALL = "2";
 
     // 相邻文档模式
     public static readonly ADJ_NONE = "0";
