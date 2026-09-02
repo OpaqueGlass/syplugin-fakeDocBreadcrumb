@@ -12,7 +12,7 @@ import { openRefLinkByAPI } from "@/utils/common";
 import { isValidStr } from "@/utils/commonCheck";
 import { isNotebookDocEnabled } from "@/utils/compatUtils";
 import { lang } from "@/utils/lang";
-import { getEmojiElement, getEmojiHtmlStr, trimListDocsByPathAPIReturnedDocName } from "@/utils/onlyThisUtil";
+import { getEmojiElement, getEmojiHtmlStr, resolveNodeType, trimListDocsByPathAPIReturnedDocName } from "@/utils/onlyThisUtil";
 import { clearMenuInstance, readFromWnd, saveMenuInstance } from "@/worker/menuHelper";
 import * as siyuan from "siyuan";
 import { BreadcrumbContext } from "./IProvider";
@@ -126,7 +126,7 @@ export class BreadcrumbProvider implements IBreadcrumbProvider {
         // emoji 图标
         const iconElement = getEmojiElement({
             iconString: pathObject.icon,
-            hasChild: pathObject.subFileCount !== 0,
+            nodeType: resolveNodeType(pathObject.type === "NOTEBOOK", pathObject.subFileCount),
             textClassName: "og-fdb-bread-emojitext",
             picClassName: "og-fdb-bread-emojipic",
             iconMode: setting.icon,
@@ -403,7 +403,7 @@ export class BreadcrumbProvider implements IBreadcrumbProvider {
             let menuItemObj: any = {
                 iconHTML: getEmojiHtmlStr({
                     iconString: currSibling.icon,
-                    hasChild: currSibling.subFileCount > 0,
+                    nodeType: resolveNodeType(type === "ROOT", currSibling.subFileCount),
                     svgClassName: "b3-menu__icon",
                     wrapSvg: true,
                     wrapBlank: true,
@@ -549,7 +549,7 @@ export class BreadcrumbProvider implements IBreadcrumbProvider {
                     // icon
                     const iconHTML = getEmojiHtmlStr({
                         iconString: childDoc.icon,
-                        hasChild: childDoc.subFileCount > 0,
+                        nodeType: resolveNodeType(false, childDoc.subFileCount),
                         svgClassName: "b3-menu__icon",
                         wrapSvg: true,
                         wrapBlank: true,

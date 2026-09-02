@@ -119,26 +119,45 @@ function getSvgElement(svgIconHref: string): SVGSVGElement {
     return svg;
 }
 
-enum DocIconType {
-    NOTEBOOK,
-    PARENT_FILE,
-    FILE,
+/**
+ * 面包屑节点类型（决定默认图标）
+ */
+export enum BreadcrumbNodeType {
+    NOTEBOOK,    // 笔记本
+    PARENT_FILE, // 有子文档的文档
+    FILE,        // 无子文档的文档
 }
 
 function isSvgIconAsDefaultEnabled(): string {
     return getSiyuanBaseConfig().fileTree?.useSVGDefaultIcon ?? false;
 }
 
-function getDefaultSvgIcon(type: DocIconType): SVGSVGElement {
+function getDefaultSvgIcon(type: BreadcrumbNodeType): SVGSVGElement {
     switch (type) {
-        case DocIconType.NOTEBOOK:
-            return getSvgElement("iconFilesRoot");
-        case DocIconType.PARENT_FILE:
+        case BreadcrumbNodeType.NOTEBOOK:
+            return getSvgElement("iconNotebook");
+        case BreadcrumbNodeType.PARENT_FILE:
             return getSvgElement("iconFileText");
+        case BreadcrumbNodeType.FILE:
         default:
-        case DocIconType.FILE:
             return getSvgElement("iconFile");
     }
+}
+
+/**
+ * 根据节点信息解析面包屑节点类型
+ * @param isNotebook 是否为笔记本
+ * @param subFileCount 子文档数量
+ * @returns 节点类型
+ */
+export function resolveNodeType(isNotebook: boolean, subFileCount: number): BreadcrumbNodeType {
+    if (isNotebook) {
+        return BreadcrumbNodeType.NOTEBOOK;
+    }
+    if (subFileCount > 0) {
+        return BreadcrumbNodeType.PARENT_FILE;
+    }
+    return BreadcrumbNodeType.FILE;
 }
 
 /**
@@ -185,7 +204,7 @@ function unicodeToEmoji(unicodeStr: string): string {
  */
 export interface IDocIconOptions {
     iconString: string,
-    hasChild: boolean,
+    nodeType: BreadcrumbNodeType,
     textClassName?: string,
     picClassName?: string,
     svgClassName?: string, // 仅对 svg 图标生效的 class
@@ -201,7 +220,7 @@ export interface IDocIconOptions {
  */
 function getDocIconElement({
     iconString,
-    hasChild,
+    nodeType,
     textClassName = "og-fdb-menu-emojitext",
     picClassName = "og-fdb-menu-emojipic",
     svgClassName = "",
@@ -234,7 +253,7 @@ function getDocIconElement({
         tempResult = tempSpanResult;
     } else if (isSvgIconAsDefaultEnabled() && iconMode == CONSTANTS.ICON_ALL) {
         //@ts-ignore
-        let tempSvgResult = getDefaultSvgIcon(hasChild ? DocIconType.PARENT_FILE : DocIconType.FILE);
+        let tempSvgResult = getDefaultSvgIcon(nodeType);
         // svgClassName 仅对 svg 本身生效
         if (isValidStr(svgClassName)) {
             tempSvgResult.classList.add(...svgClassName.split(" "));
@@ -251,7 +270,7 @@ function getDocIconElement({
         // 代码片段默认值
         let tempSpanResult = document.createElement("span");
         tempSpanResult.className = textClassName;
-        tempSpanResult.textContent = getDefaultEmojiIcon(hasChild);
+        tempSpanResult.textContent = getDefaultEmojiIcon(nodeType !== BreadcrumbNodeType.FILE);
         tempResult = tempSpanResult;
     } else if (wrapBlank) {
         // 空值也包装
