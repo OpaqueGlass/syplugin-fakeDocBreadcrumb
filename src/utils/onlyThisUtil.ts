@@ -134,10 +134,10 @@ function getDefaultSvgIcon(type: DocIconType): SVGSVGElement {
         case DocIconType.NOTEBOOK:
             return getSvgElement("iconFilesRoot");
         case DocIconType.PARENT_FILE:
-            return getSvgElement("iconFiles");
+            return getSvgElement("iconFileText");
         default:
         case DocIconType.FILE:
-            return getSvgElement("iconFileText");
+            return getSvgElement("iconFile");
     }
 }
 
@@ -181,6 +181,20 @@ function unicodeToEmoji(unicodeStr: string): string {
 }
 
 /**
+ * 文档图标生成选项
+ */
+export interface IDocIconOptions {
+    iconString: string,
+    hasChild: boolean,
+    textClassName?: string,
+    picClassName?: string,
+    svgClassName?: string, // 仅对 svg 图标生效的 class
+    wrapSvg?: boolean, // span 包装默认svg图标（emoji 文本始终包裹 span）
+    wrapBlank?: boolean,// span 包装空值
+    iconMode?: string,
+}
+
+/**
  * 生成文档图标 HTMLElement 元素
  * @param param0 
  * @returns 
@@ -190,23 +204,14 @@ function getDocIconElement({
     hasChild,
     textClassName = "og-fdb-menu-emojitext",
     picClassName = "og-fdb-menu-emojipic",
-    wrapText = true,
+    svgClassName = "",
+    wrapSvg = true,
     wrapBlank = true,
     iconMode = CONSTANTS.ICON_CUSTOM_ONLY,
     outerHtmlTag = ""
-} 
-    : {
-        iconString: string,
-        hasChild: boolean,
-        textClassName: string,
-        picClassName: string,
-        wrapText: boolean, // span 包装emoji文本
-        wrapBlank: boolean,// span 包装空值
-        iconMode: string,
-        outerHtmlTag: string, // 外部嵌套的容器tag，为null，则图片img，文字按照wrapText/wrapblank判断
-    }): HTMLElement {
+}: IDocIconOptions & { outerHtmlTag?: string | null }): Element {
     let result: HTMLElement = outerHtmlTag == null ? null : document.createElement(outerHtmlTag);
-    let tempResult: HTMLElement = null;
+    let tempResult: Element = null;
 
     // 根据类型判断
     if (iconString.startsWith("api/icon/getDynamicIcon")) {
@@ -229,14 +234,26 @@ function getDocIconElement({
         tempResult = tempSpanResult;
     } else if (isSvgIconAsDefaultEnabled() && iconMode == CONSTANTS.ICON_ALL) {
         //@ts-ignore
-        tempResult = getDefaultSvgIcon(hasChild ? DocIconType.PARENT_FILE : DocIconType.FILE);
+        let tempSvgResult = getDefaultSvgIcon(hasChild ? DocIconType.PARENT_FILE : DocIconType.FILE);
+        // svgClassName 仅对 svg 本身生效
+        if (isValidStr(svgClassName)) {
+            tempSvgResult.classList.add(...svgClassName.split(" "));
+        }
+        if (wrapSvg) {
+            let tempSpanResult = document.createElement("span");
+            tempSpanResult.className = textClassName;
+            tempSpanResult.appendChild(tempSvgResult);
+            tempResult = tempSpanResult;
+        } else {
+            tempResult = tempSvgResult;
+        }
     } else if (iconMode == CONSTANTS.ICON_ALL) {
         // 代码片段默认值
         let tempSpanResult = document.createElement("span");
         tempSpanResult.className = textClassName;
         tempSpanResult.textContent = getDefaultEmojiIcon(hasChild);
         tempResult = tempSpanResult;
-    } else if (wrapBlank && wrapText) {
+    } else if (wrapBlank) {
         // 空值也包装
         let tempSpanResult = document.createElement("span");
         tempSpanResult.className = textClassName;
@@ -254,62 +271,30 @@ function getDocIconElement({
 /**
  * 生成 emoji HTML 字符串（用于菜单项等需要 HTML 字符串的场景）
  * 对应原 refer.js 中的 getEmojiHtmlStr
- * @param iconString 图标字符串
- * @param hasChild 是否有子文档
- * @param textClassName 文本图标 class
- * @param picClassName 图片图标 class
- * @param wrapText 是否包裹 span
- * @param wrapBlank 空白时是否包裹 span
- * @param iconMode 图标模式 (0=NONE, 1=CUSTOM_ONLY, 2=ALL)
+ * @param options 文档图标生成选项
+ * @returns 
  */
-export function getEmojiHtmlStr(
-    iconString: string,
-    hasChild: boolean,
-    textClassName: string = "og-fdb-menu-emojitext",
-    picClassName: string = "og-fdb-menu-emojipic",
-    wrapText: boolean = true,
-    wrapBlank: boolean = true,
-    iconMode: string = CONSTANTS.ICON_CUSTOM_ONLY
-): string {
-    if (iconMode === CONSTANTS.ICON_NONE) return ``;
+export function getEmojiHtmlStr(options: IDocIconOptions): string {
+    if (options.iconMode === CONSTANTS.ICON_NONE) return ``;
     return getDocIconElement({
-        iconString,
-        hasChild,
-        textClassName,
-        picClassName,
-        iconMode,
-        wrapText,
-        wrapBlank,
+        ...options,
         outerHtmlTag: null
     })?.outerHTML ?? "";
 }
 
 /**
  * 生成 emoji HTMLElement（用于面包屑项等需要 DOM 元素的场景）
- * @param iconString 图标字符串
- * @param hasChild 是否有子文档
- * @param textClassName 文本图标 class
- * @param picClassName 图片图标 class
- * @param iconMode 图标模式
+ * @param options 文档图标生成选项
+ * @returns 
  */
-export function getEmojiElement(
-    iconString: string,
-    hasChild: boolean,
-    textClassName: string = "og-fdb-bread-emojitext",
-    picClassName: string = "og-fdb-bread-emojipic",
-    iconMode: string = CONSTANTS.ICON_CUSTOM_ONLY
-): HTMLElement | null {
-    if (iconMode === CONSTANTS.ICON_NONE) return null;
+export function getEmojiElement(options: IDocIconOptions): HTMLElement | null {
+    if (options.iconMode === CONSTANTS.ICON_NONE) return null;
     return getDocIconElement({
-        iconString,
-        hasChild,
-        textClassName,
-        picClassName,
-        iconMode,
+        ...options,
         outerHtmlTag: null,
-        wrapText: true,
+        wrapSvg: true,
         wrapBlank: false
-    });
+    }) as HTMLElement;
 }
 
 /**

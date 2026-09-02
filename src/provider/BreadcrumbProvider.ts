@@ -124,13 +124,13 @@ export class BreadcrumbProvider implements IBreadcrumbProvider {
         }
 
         // emoji 图标
-        const iconElement = getEmojiElement(
-            pathObject.icon,
-            pathObject.subFileCount !== 0,
-            "og-fdb-bread-emojitext",
-            "og-fdb-bread-emojipic",
-            setting.icon
-        );
+        const iconElement = getEmojiElement({
+            iconString: pathObject.icon,
+            hasChild: pathObject.subFileCount !== 0,
+            textClassName: "og-fdb-bread-emojitext",
+            picClassName: "og-fdb-bread-emojipic",
+            iconMode: setting.icon,
+        });
         if (iconElement) {
             item.appendChild(iconElement);
         }
@@ -401,7 +401,14 @@ export class BreadcrumbProvider implements IBreadcrumbProvider {
             const hasChildren = (currSibling.subFileCount > 0 || type === "ROOT");
 
             let menuItemObj: any = {
-                iconHTML: getEmojiHtmlStr(currSibling.icon, currSibling.subFileCount > 0, "og-fdb-menu-emojitext", "og-fdb-menu-emojipic", true, true, setting.icon),
+                iconHTML: getEmojiHtmlStr({
+                    iconString: currSibling.icon,
+                    hasChild: currSibling.subFileCount > 0,
+                    svgClassName: "b3-menu__icon",
+                    wrapSvg: true,
+                    wrapBlank: true,
+                    iconMode: setting.icon,
+                }),
                 label: `<span class="${CONSTANTS.MENU_ITEM_CLASS_NAME} ${isCurrent ? CONSTANTS.MENU_CURRENT_DOC_CLASS_NAME : ""}" data-doc-id="${currSibling.id}" title="${docName}">${trimedName}</span>`,
                 accelerator: isCurrent ? "<-" : undefined,
                 current: isCurrent,
@@ -540,7 +547,14 @@ export class BreadcrumbProvider implements IBreadcrumbProvider {
                     menuItemEl.appendChild(labelEl);
 
                     // icon
-                    const iconHTML = getEmojiHtmlStr(childDoc.icon, childDoc.subFileCount > 0, "og-fdb-menu-emojitext", "og-fdb-menu-emojipic", true, true, setting.icon);
+                    const iconHTML = getEmojiHtmlStr({
+                        iconString: childDoc.icon,
+                        hasChild: childDoc.subFileCount > 0,
+                        svgClassName: "b3-menu__icon",
+                        wrapSvg: true,
+                        wrapBlank: true,
+                        iconMode: setting.icon,
+                    });
                     if (iconHTML) {
                         const iconDiv = document.createElement('div');
                         iconDiv.innerHTML = iconHTML;
