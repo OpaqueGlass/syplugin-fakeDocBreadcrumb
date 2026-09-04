@@ -212,6 +212,10 @@ export function setStyle() {
     }
     ${styleForv3_7_0}
     ${styleForHideNativeBreadcrumb}
+
+    .og-fake-doc-breadcrumb-container .protyle-breadcrumb__text--ellipsis {
+        max-width: unset;
+    }
     `;
     head.appendChild(style);
 }
