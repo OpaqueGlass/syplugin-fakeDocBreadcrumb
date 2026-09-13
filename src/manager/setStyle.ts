@@ -222,6 +222,8 @@ export function setStyle() {
         overflow-x: auto;
         display: flex;
         align-items: center;
+        font-size: 12px;
+        max-width: min(40vw, 40%);
     }
     .${CONSTANTS.MOBILE_BUTTON_CLASS} {
         border: none;

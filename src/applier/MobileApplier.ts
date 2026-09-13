@@ -23,6 +23,20 @@ export class MobileApplier extends BreadcrumbApplier {
     protected setContainerClass(container: HTMLElement, context: BreadcrumbContext): void {
         container.classList.add(CONSTANTS.MOBILE_CONTAINER_CLASS);
         container.setAttribute(CONSTANTS.MOBILE_MARKER_ATTR, "true");
+        // 仅新建时执行；复用路径不会进入本方法，监听器随元素保留，不会重复绑定
+        this.blockTouchPropagation(container);
+    }
+
+    /**
+     * 容器横向滑动仅用于滚动路径文本，触摸事件停止冒泡，
+     * 避免触发思源移动端上层的滑动手势（切换文档/侧栏）
+     */
+    private blockTouchPropagation(container: HTMLElement): void {
+        for (const type of ["touchstart", "touchmove", "touchend", "touchcancel"]) {
+            container.addEventListener(type, (event) => {
+                event.stopPropagation();
+            });
+        }
     }
 
     /** 已有按钮则复用，否则新建容器 */
