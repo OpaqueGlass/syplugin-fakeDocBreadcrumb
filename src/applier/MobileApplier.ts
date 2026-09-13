@@ -1,7 +1,8 @@
 /**
  * MobileApplier - 移动端应用器
- * 路径按钮插入原生面包屑按钮之前，相邻文档按钮插入原生面包屑按钮之后；
- * 路径按钮点击弹出思源原生菜单（底部抽屉）做层级跳转
+ * 路径按钮插入原生面包屑按钮之前，相邻文档按钮置于 protyle-breadcrumb__plugin 槽位；
+ * 路径按钮点击弹出思源原生菜单（底部抽屉）做层级跳转。
+ * 页面切换时按钮不销毁重建，仅复用元素并重绑行为与禁用态，避免切换闪烁
  */
 
 import { CONSTANTS } from "@/constants";
@@ -16,24 +17,50 @@ import { BreadcrumbApplier } from "./ApplierBase";
 const ADJ_PROVIDER_ID = "adjacent-doc";
 
 export class MobileApplier extends BreadcrumbApplier {
+    /** 复用的路径按钮引用；createContainer 每轮重新查找，protyle 重建后自动失效重建 */
+    private pathButton: HTMLButtonElement | null = null;
+
     protected setContainerClass(container: HTMLElement, context: BreadcrumbContext): void {
         container.classList.add(CONSTANTS.MOBILE_CONTAINER_CLASS);
         container.setAttribute(CONSTANTS.MOBILE_MARKER_ATTR, "true");
     }
 
-    protected async assembleContainer(container: HTMLElement, context: BreadcrumbContext): Promise<void> {
-        const button = document.createElement("button");
-        button.type = "button";
-        button.className = CONSTANTS.MOBILE_BUTTON_CLASS;
-        button.textContent = this.buildPathText(context);
+    /** 已有按钮则复用，否则新建容器 */
+    protected createContainer(context: BreadcrumbContext): HTMLElement {
+        const bar = context.protyleElement.querySelector(".protyle-breadcrumb") as HTMLElement | null;
+        const existing = bar?.querySelector(
+            `.${CONSTANTS.MOBILE_CONTAINER_CLASS}[${CONSTANTS.MOBILE_MARKER_ATTR}]`
+        ) as HTMLElement | null;
+        if (existing) {
+            this.pathButton = existing.querySelector(`.${CONSTANTS.MOBILE_BUTTON_CLASS}`) as HTMLButtonElement | null;
+            return existing;
+        }
+        this.pathButton = null;
+        return super.createContainer(context);
+    }
 
-        button.addEventListener("click", (event) => {
+    protected async assembleContainer(container: HTMLElement, context: BreadcrumbContext): Promise<void> {
+        let button = this.pathButton;
+        if (!button || !container.contains(button)) {
+            button = document.createElement("button");
+            button.type = "button";
+            button.className = CONSTANTS.MOBILE_BUTTON_CLASS;
+            container.appendChild(button);
+            this.pathButton = button;
+        }
+
+        button.textContent = this.buildPathText(context);
+        // 直接onclick实现覆盖旧的点击处理
+        button.onclick = (event) => {
             event.preventDefault();
-            event.stopImmediatePropagation();
             event.stopPropagation();
             this.openMobilePathMenu(context);
-        });
-        container.appendChild(button);
+        };
+    }
+
+    /** 复用策略下容器不销毁，旧面包屑清理交由 createContainer/insertAdjacentButtons 处理 */
+    protected removeOldBreadcrumb(protyleElement: HTMLElement): void {
+        // no-op
     }
 
     protected insertToDOM(container: HTMLElement, context: BreadcrumbContext): void {
@@ -43,13 +70,12 @@ export class MobileApplier extends BreadcrumbApplier {
             return;
         }
 
-        // 相邻按钮游离于容器之外，与容器一并按标记清理，防止重复插入
-        bar.querySelectorAll(`[${CONSTANTS.MOBILE_MARKER_ATTR}]`).forEach((el) => el.remove());
+        if (container.parentElement !== bar) {
+            bar.prepend(container);
+        }
 
-        bar.prepend(container);
-
-        // 相邻文档数据为异步获取，数据就绪后再补插，不阻塞主流程
-        this.insertAdjacentButtons(bar, context);
+        // 相邻文档数据为异步获取，数据就绪后再同步按钮状态，不阻塞主流程
+        this.syncAdjacentButtons(bar, context);
     }
 
     protected adjustOverflow(container: HTMLElement): void {
@@ -128,54 +154,69 @@ export class MobileApplier extends BreadcrumbApplier {
         menu.fullscreen();
     }
 
-    /** 相邻按钮显示由 showAdjacentDocButton 控制；移动端恒为精简模式（无文档名、等宽） */
-    private async insertAdjacentButtons(bar: HTMLElement, context: BreadcrumbContext): Promise<void> {
+    /**
+     * 相邻按钮同步进 protyle-breadcrumb__plugin：已有则重绑文档与禁用态，无则创建；
+     * 关闭显示时移除。显示由 showAdjacentDocButton 控制；移动端恒为精简模式（无文档名、等宽）
+     */
+    private async syncAdjacentButtons(bar: HTMLElement, context: BreadcrumbContext): Promise<void> {
+        const pluginSlot = bar.querySelector(".protyle-breadcrumb__plugin") as HTMLElement | null;
+
         if (context.setting.showAdjacentDocButton === CONSTANTS.ADJ_NONE) {
+            pluginSlot?.querySelectorAll(`[${CONSTANTS.MOBILE_MARKER_ATTR}][${CONSTANTS.MOBILE_ADJ_DIRECTION_ATTR}]`).forEach((el) => el.remove());
             return;
         }
 
         const adjProvider = this.providers.find((provider) => provider.id === ADJ_PROVIDER_ID) as AdjacentDocProvider;
-        if (!adjProvider) {
+        if (!adjProvider || !pluginSlot) {
             return;
         }
 
         const adjacentDocs = await adjProvider.getAdjacentDocs(context.pathObjects, context.notebookDocFlag, context.setting);
 
-        const nativeBreadcrumbBtn = bar.querySelector(".protyle-breadcrumb__icon");
-        if (!nativeBreadcrumbBtn) {
-            debugPush("移动端原生面包屑按钮未找到");
-            return;
-        }
-
-        nativeBreadcrumbBtn.insertAdjacentElement("afterend", this.createAdjacentIconBtn("next", adjacentDocs.nextDoc));
-        nativeBreadcrumbBtn.insertAdjacentElement("afterend", this.createAdjacentIconBtn("prev", adjacentDocs.previousDoc));
+        const prevBtn = this.ensureAdjacentBtn(pluginSlot, "prev");
+        const nextBtn = this.ensureAdjacentBtn(pluginSlot, "next");
+        this.rebindAdjacentBtn(prevBtn, "prev", adjacentDocs.previousDoc);
+        this.rebindAdjacentBtn(nextBtn, "next", adjacentDocs.nextDoc);
     }
 
-    private createAdjacentIconBtn(direction: "prev" | "next", doc: IFile | null): HTMLElement {
-        const isPrevious = direction === "prev";
-        const button = document.createElement("button");
-        button.type = "button";
-        button.className = `block__icon fn__flex-center ariaLabel ${CONSTANTS.MOBILE_ADJ_BTN_CLASS}`;
-        button.setAttribute(CONSTANTS.MOBILE_MARKER_ATTR, "true");
-        button.setAttribute("data-og-adjacent-direction", direction);
-        button.setAttribute("aria-label", isPrevious ? lang("previous_doc") : lang("next_doc"));
+    /** 查找槽位内已有的相邻按钮，缺失时创建空骨架（svg 由重绑前已定，无需重建） */
+    private ensureAdjacentBtn(pluginSlot: HTMLElement, direction: "prev" | "next"): HTMLButtonElement {
+        let button = pluginSlot.querySelector(
+            `button[${CONSTANTS.MOBILE_MARKER_ATTR}][${CONSTANTS.MOBILE_ADJ_DIRECTION_ATTR}="${direction}"]`
+        ) as HTMLButtonElement | null;
+        if (!button) {
+            button = document.createElement("button");
+            button.type = "button";
+            button.className = `block__icon fn__flex-center ariaLabel ${CONSTANTS.MOBILE_ADJ_BTN_CLASS}`;
+            button.setAttribute(CONSTANTS.MOBILE_MARKER_ATTR, "true");
+            button.setAttribute(CONSTANTS.MOBILE_ADJ_DIRECTION_ATTR, direction);
+            button.setAttribute("aria-label", direction === "prev" ? lang("previous_doc") : lang("next_doc"));
 
-        if (doc?.id) {
-            button.setAttribute("data-doc-id", doc.id);
-            button.addEventListener("click", () => {
-                openRefLinkByAPI({ paramDocId: doc.id });
-            });
-        } else {
-            button.disabled = true;
+            const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+            const use = document.createElementNS("http://www.w3.org/2000/svg", "use");
+            const iconId = direction === "prev" ? CONSTANTS.MOBILE_ICON_PREV : CONSTANTS.MOBILE_ICON_NEXT;
+            use.setAttributeNS("http://www.w3.org/1999/xlink", "xlink:href", `#${iconId}`);
+            svg.appendChild(use);
+            button.appendChild(svg);
+
+            pluginSlot.appendChild(button);
         }
-
-        const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-        const use = document.createElementNS("http://www.w3.org/2000/svg", "use");
-        const iconId = isPrevious ? CONSTANTS.MOBILE_ICON_PREV : CONSTANTS.MOBILE_ICON_NEXT;
-        use.setAttributeNS("http://www.w3.org/1999/xlink", "xlink:href", `#${iconId}`);
-        svg.appendChild(use);
-        button.appendChild(svg);
-
         return button;
+    }
+
+    /** 重绑目标文档、点击行为与禁用态；onclick 赋值覆盖旧处理器 */
+    private rebindAdjacentBtn(button: HTMLButtonElement, direction: "prev" | "next", doc: IFile | null): void {
+        if (doc?.id) {
+            button.disabled = false;
+            button.setAttribute("data-doc-id", doc.id);
+            button.onclick = () => {
+                openRefLinkByAPI({ paramDocId: doc.id });
+            };
+        } else {
+            // 无相邻文档时禁用占位，保持按钮等宽
+            button.disabled = true;
+            button.removeAttribute("data-doc-id");
+            button.onclick = null;
+        }
     }
 }

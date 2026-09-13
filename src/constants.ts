@@ -33,6 +33,7 @@ export class CONSTANTS {
     public static readonly MOBILE_BUTTON_CLASS = "og-fdb-mobile-path-btn";
     public static readonly MOBILE_ADJ_BTN_CLASS = "og-fdb-mobile-adj-btn";
     public static readonly MOBILE_MARKER_ATTR = "data-og-fdb-mobile";
+    public static readonly MOBILE_ADJ_DIRECTION_ATTR = "data-og-adjacent-direction";
     public static readonly MOBILE_ICON_PREV = "ogFdbPrev";
     public static readonly MOBILE_ICON_NEXT = "ogFdbNext";
 

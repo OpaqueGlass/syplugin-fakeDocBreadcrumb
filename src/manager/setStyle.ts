@@ -236,6 +236,9 @@ export function setStyle() {
     .${CONSTANTS.MOBILE_ADJ_BTN_CLASS} {
         flex-shrink: 0;
     }
+    .${CONSTANTS.MOBILE_ADJ_BTN_CLASS}[${CONSTANTS.MOBILE_ADJ_DIRECTION_ATTR}="next"] {
+        margin-left: 4px;
+    }
     `;
     head.appendChild(style);
 }
