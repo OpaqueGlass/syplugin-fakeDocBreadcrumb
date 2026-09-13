@@ -10,7 +10,7 @@ import { getReadOnlyGSettings } from "@/manager/settingManager";
 import { isValidStr } from "@/utils/commonCheck";
 import { isNotebookDoc, isNotebookDocEnabled, getListDocsByPathAPIFilePath } from "@/utils/compatUtils";
 import { escapeHTML, stripHTML } from "@/utils/onlyThisUtil";
-import { getNotebookInfoLocallyF, getHPathById, getDocInfo, isMobile, getDocOutlineAPI } from "@/syapi";
+import { getNotebookInfoLocallyF, getHPathById, getDocInfo, isMobile, getDocOutlineAPI, getCurrentDocIdF } from "@/syapi";
 import { BreadcrumbProvider } from "@/provider/BreadcrumbProvider";
 import { AdjacentDocProvider } from "@/provider/AdjacentDocProvider";
 import { ApplierFactory } from "@/applier/ApplierFactory";
@@ -37,8 +37,8 @@ export class BreadcrumbManager {
      * 主流程（原 main 函数）
      */
     async processProtyle(protyle: any): Promise<void> {
-        if (isMobile()) {
-            debugPush("插件停止支持移动端");
+        if (isMobile() && !getReadOnlyGSettings().applyForMobileSystem) {
+            debugPush("移动端未启用，插件停止支持移动端");
             return;
         }
 
@@ -229,6 +229,9 @@ export class BreadcrumbManager {
     }
 
     private getAllShowingDocId(): string[] {
+        if (isMobile()) {
+            return [getCurrentDocIdF()];
+        } 
         const elemList = window.document.querySelectorAll("[data-type=wnd] .protyle.fn__flex-1:not(.fn__none) .protyle-background");
         const result = Array.from(elemList).map((elem) => elem.getAttribute("data-node-id"));
         return result.filter((id): id is string => isValidStr(id));
@@ -377,7 +380,6 @@ export class BreadcrumbManager {
                 buildMenuItems(menuItems).forEach((menuItem) => {
                     tempMenu.addItem(menuItem);
                 });
-
                 // 菜单展示位置调整
                 if (menuItems.length * 30 > (window.innerHeight - rect.bottom) * 0.7) {
                     tempMenu.open({ x: rect.right, y: rect.top, isLeft: false });

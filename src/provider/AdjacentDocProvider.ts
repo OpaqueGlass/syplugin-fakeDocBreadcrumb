@@ -79,8 +79,8 @@ export class AdjacentDocProvider implements IBreadcrumbProvider {
         return button;
     }
 
-    /** 获取相邻文档 */
-    private async getAdjacentDocs(pathObjects: IPathObject[], notebookDocFlag: boolean, setting: any): Promise<IAdjacentDocs> {
+    /** 获取相邻文档（公开供 MobileApplier 复用计算，含 TTL 缓存） */
+    async getAdjacentDocs(pathObjects: IPathObject[], notebookDocFlag: boolean, setting: any): Promise<IAdjacentDocs> {
         const result: IAdjacentDocs = {
             previousDoc: null,
             nextDoc: null,

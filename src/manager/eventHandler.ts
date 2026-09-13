@@ -5,6 +5,7 @@ import { BreadcrumbManager } from "@/manager/breadcrumbManager";
 import { getProtyleInfo } from "@/utils/onlyThisUtil";
 import { debugPush, infoPush } from "@/logger";
 import type { IEventBusMap } from "siyuan";
+import { isMobile } from "@/syapi";
 
 export default class EventHandler {
     private handlerBindList: Record<string, (arg1: CustomEvent) => void> = {
@@ -53,7 +54,7 @@ export default class EventHandler {
         const setting = getReadOnlyGSettings();
 
         // 过滤非传统 protyle（内嵌/浮窗）
-        if (protyle.model == null && !setting.notOnlyOpenDocs) {
+        if (protyle.model == null && !isMobile() && !setting.notOnlyOpenDocs) {
             infoPush("插件内嵌Protyle、浮窗。停止操作。", protyle);
             return;
         }

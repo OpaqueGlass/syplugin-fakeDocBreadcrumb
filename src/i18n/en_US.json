@@ -23,6 +23,8 @@
     "setting_oneLineBreadcrumb_desp": "Display the breadcrumb on the same line as SiYuan's native block breadcrumb. Not recommended: this relies on the native breadcrumb's DOM structure and flex layout. A SiYuan update, or a conflict with another plugin, may cause misalignment, squeezing, or failure.",
     "setting_hideNativeBreadcrumb_name": "🧪Hide Native Block Breadcrumb",
     "setting_hideNativeBreadcrumb_desp": "Hide SiYuan's native block breadcrumb. Requires \"Single Line Breadcrumb\" to be enabled to take effect. Not recommended: SiYuan updates may change the breadcrumb's behavior and rendering, which can break this option or cause unexpected issues.",
+    "setting_applyForMobileSystem_name": "🧪Mobile Mode",
+    "setting_applyForMobileSystem_desp": "Show document breadcrumb on mobile: path button + popup menu + previous/next buttons (simplified style)",
     "setting_usePluginArrow_name": "Use Plugin Arrow",
     "setting_usePluginArrow_desp": "Use native arrow style `&g;` instead of theme custom `/` to ensure the arrows in breadcrumbs are clickable.",
     "setting_icon_name": "Icon Display",

@@ -216,6 +216,26 @@ export function setStyle() {
     .og-fake-doc-breadcrumb-container .protyle-breadcrumb__text--ellipsis {
         max-width: unset;
     }
+
+    .${CONSTANTS.MOBILE_CONTAINER_CLASS} {
+        min-width: 0;
+        overflow-x: auto;
+        display: flex;
+        align-items: center;
+    }
+    .${CONSTANTS.MOBILE_BUTTON_CLASS} {
+        border: none;
+        background: transparent;
+        color: var(--b3-theme-on-surface);
+        white-space: nowrap;
+        padding: 0 4px;
+        text-align: left;
+        display: inline-flex;
+        align-items: center;
+    }
+    .${CONSTANTS.MOBILE_ADJ_BTN_CLASS} {
+        flex-shrink: 0;
+    }
     `;
     head.appendChild(style);
 }

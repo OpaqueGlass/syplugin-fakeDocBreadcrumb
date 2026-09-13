@@ -27,6 +27,15 @@ export class CONSTANTS {
     public static readonly ADJ_SAME_PARENT = "1";
     public static readonly ADJ_SAME_LEVEL = "2";
 
+    // 移动端
+    public static readonly MOBILE_MENU_ID = "og-fdb-mobile-menu";
+    public static readonly MOBILE_CONTAINER_CLASS = "og-fdb-mobile-button";
+    public static readonly MOBILE_BUTTON_CLASS = "og-fdb-mobile-path-btn";
+    public static readonly MOBILE_ADJ_BTN_CLASS = "og-fdb-mobile-adj-btn";
+    public static readonly MOBILE_MARKER_ATTR = "data-og-fdb-mobile";
+    public static readonly MOBILE_ICON_PREV = "ogFdbPrev";
+    public static readonly MOBILE_ICON_NEXT = "ogFdbNext";
+
     // 冲突插件
     public static readonly MULTILINE_CONFLICT_PLUGINS = ["siyuan-plugin-toolbar-plus"];
 

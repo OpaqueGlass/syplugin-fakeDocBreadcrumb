@@ -5,7 +5,7 @@
  */
 
 import { CONSTANTS } from "@/constants";
-import { errorPush } from "@/logger";
+import { debugPush, errorPush } from "@/logger";
 import { getReadOnlyGSettings } from "@/manager/settingManager";
 import { createDocWithPath, getNodebookList, listDocsByPathT } from "@/syapi";
 import { openRefLinkByAPI } from "@/utils/common";
@@ -444,7 +444,7 @@ export class BreadcrumbProvider implements IBreadcrumbProvider {
             }
             tempMenu.addItem(menuItemObj);
         }
-
+        debugPush("面包屑菜单", tempMenu, siblings, type, box, thisPath, nextId);
         // 菜单展示位置调整
         if (siblings.length * 30 > (window.innerHeight - rect.bottom) * 0.7) {
             tempMenu.open({ x: rect.right, y: rect.top, isLeft: false });
