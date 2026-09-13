@@ -13,6 +13,7 @@ import { lang } from "@/utils/lang";
 import * as siyuan from "siyuan";
 import { AdjacentDocProvider } from "@/provider/AdjacentDocProvider";
 import { BreadcrumbApplier } from "./ApplierBase";
+import { isNotebookDocEnabled } from "@/utils/compatUtils";
 
 const ADJ_PROVIDER_ID = "adjacent-doc";
 
@@ -96,12 +97,39 @@ export class MobileApplier extends BreadcrumbApplier {
         // 移动端为横向滚动布局，基类针对 .protyle-breadcrumb__item 的折行检测不适用
     }
 
-    /** 路径按钮文本：笔记本 + 全部父链 + 当前文档，不设层级上限 */
+    /**
+     * 路径按钮文本：笔记本 + 全部父链 + 当前文档；
+     * 层级超过 5 时按 foldedFrontShow/foldedEndShow 折叠中间层级，阈值与桌面端 BreadcrumbProvider 一致
+     */
     private buildPathText(context: BreadcrumbContext): string {
         const setting = context.setting;
         const maxLength = Number(setting.breadcrumbNameMaxLength) || 0;
+        const pathObjects = context.pathObjects;
 
-        return context.pathObjects
+        if (pathObjects.length <= 5) {
+            return this.joinNames(pathObjects, setting, maxLength);
+        }
+
+        // 折叠隐藏自/结束于，索引均相对原始 pathObjects（含未显示的笔记本位）
+        const foldStartAt = setting.showNotebook ? setting.foldedFrontShow : setting.foldedFrontShow + 1;
+        const foldEndAt = pathObjects.length - setting.foldedEndShow - 1;
+
+        const parts: string[] = [];
+        for (let i = 0; i < pathObjects.length; i++) {
+            if (i >= foldStartAt && i <= foldEndAt) {
+                parts.push("···");
+                i = foldEndAt;
+                continue;
+            }
+            if ((setting.showNotebook && i === 0) || i !== 0) {
+                parts.push(this.trimName(pathObjects[i].name, maxLength));
+            }
+        }
+        return parts.join(" / ");
+    }
+
+    private joinNames(pathObjects: IPathObject[], setting: BreadcrumbContext["setting"], maxLength: number): string {
+        return pathObjects
             .filter((pathObject, index) => index !== 0 || setting.showNotebook)
             .map((pathObject) => this.trimName(pathObject.name, maxLength))
             .join(" / ");
@@ -123,6 +151,7 @@ export class MobileApplier extends BreadcrumbApplier {
 
         const notebook = context.pathObjects[0];
         if (setting.showNotebook && notebook?.type === "NOTEBOOK") {
+            let notebookClickable = isNotebookDocEnabled();
             menu.addItem({
                 iconHTML: getEmojiHtmlStr({
                     iconString: notebook.icon,
@@ -133,7 +162,13 @@ export class MobileApplier extends BreadcrumbApplier {
                     wrapBlank: true,
                     iconMode: setting.icon,
                 }),
+                disabled: !notebookClickable,
                 label: `<span class="${CONSTANTS.MENU_ITEM_CLASS_NAME}">${escapeHTML(this.trimName(notebook.name, maxLength))}</span>`,
+                click: () => {
+                    if (notebookClickable) {
+                        openRefLinkByAPI({ paramDocId: notebook.id });
+                    }
+                },
             });
             menu.addSeparator();
         }

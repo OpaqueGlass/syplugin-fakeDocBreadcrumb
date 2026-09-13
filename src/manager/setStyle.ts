@@ -224,6 +224,7 @@ export function setStyle() {
         align-items: center;
         font-size: 12px;
         max-width: min(40vw, 40%);
+        scrollbar-width: none;
     }
     .${CONSTANTS.MOBILE_BUTTON_CLASS} {
         border: none;
