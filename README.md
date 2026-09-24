@@ -22,7 +22,7 @@
 
 #### Other explanation
 
-- No support for Android or other mobile Device;
+- On mobile, only simplified version of the breadcrumbs. For more complete functionality, please use other plugins, like the breadcrumbs in syplugin-hierarchyNavigate.
 - You can browse the settings on the plugin settings page. Just a tip, the settings page can be scrolled up and down.
 
 ## Feedback bugs
