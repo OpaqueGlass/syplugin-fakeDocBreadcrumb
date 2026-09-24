@@ -21,6 +21,22 @@ export class MobileApplier extends BreadcrumbApplier {
     /** 复用的路径按钮引用；createContainer 每轮重新查找，protyle 重建后自动失效重建 */
     private pathButton: HTMLButtonElement | null = null;
 
+    /** 移除插件插入到该 protyle 的移动端元素，供移动端模式关闭时清理残留 */
+    public static removeMobileArtifacts(protyleElement: HTMLElement): void {
+        if (!protyleElement) {
+            return;
+        }
+
+        const artifactSelectors = [
+            `.${CONSTANTS.MOBILE_CONTAINER_CLASS}[${CONSTANTS.MOBILE_MARKER_ATTR}]`,
+            `button[${CONSTANTS.MOBILE_MARKER_ATTR}][${CONSTANTS.MOBILE_ADJ_DIRECTION_ATTR}]`,
+            ".og-breadcrumb-oneline-divider",
+        ];
+        for (const selector of artifactSelectors) {
+            protyleElement.querySelectorAll(selector).forEach((elem) => elem.remove());
+        }
+    }
+
     protected setContainerClass(container: HTMLElement, context: BreadcrumbContext): void {
         container.classList.add(CONSTANTS.MOBILE_CONTAINER_CLASS);
         container.setAttribute(CONSTANTS.MOBILE_MARKER_ATTR, "true");

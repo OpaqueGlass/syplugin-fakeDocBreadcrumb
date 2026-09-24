@@ -1,3 +1,6 @@
+import { CONSTANTS } from "@/constants";
+import { getBackend } from "siyuan";
+
 /**
  * 判定字符串是否有效
  * @param s 需要检查的字符串（或其他类型的内容）
@@ -49,6 +52,24 @@ export function isEventCtrlKey(event) {
         return event.metaKey;
     }
     return event.ctrlKey;
+}
+
+/**
+ * 解析移动端模式的三态设置项，判断当前是否应插入移动端面包屑
+ * 调用前提：isMobile() 为真，桌面端不受该设置项影响
+ */
+export function isMobileBreadcrumbEnabled(setting: any): boolean {
+    const mode = String(setting?.applyForMobileSystem ?? CONSTANTS.MOBILE_MODE_ANDROID_ONLY);
+
+    if (mode === CONSTANTS.MOBILE_MODE_DISABLED) {
+        return false;
+    }
+    if (mode === CONSTANTS.MOBILE_MODE_ALL_MOBILE) {
+        return true;
+    }
+
+    // 仅安卓模式为白名单语义：非 android（含 ios/harmony 与未识别取值）一律不启用
+    return getBackend() === "android";
 }
 
 /**

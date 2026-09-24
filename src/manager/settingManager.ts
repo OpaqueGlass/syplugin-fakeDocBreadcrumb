@@ -17,8 +17,10 @@ const settingDefinition = new Array<IConfigProperty>;
 
 let setting: any = ref({});
 
+const SETTING_VERSION = 20260920;
+
 const defaultSetting: any = {
-    "@version": 20260705,
+    "@version": SETTING_VERSION,
     nameMaxLength: 15,          // 菜单文档名最大长度（字符数）
     breadcrumbNameMaxLength: 0, // 面包屑文档名最大长度（em，0 = 自适应）
     docMaxNum: 128,
@@ -39,7 +41,7 @@ const defaultSetting: any = {
     menuExtendSubDocDepth: 2,
     swapClickFunction: false,
     showRoot: false,
-    applyForMobileSystem: true,
+    applyForMobileSystem: "1",
     showAdjacentDocButton: "2",
     simplifyAdjacentDocButton: false,
     autoFixFocusError: false,
@@ -51,6 +53,16 @@ let tabProperties: Array<TabProperty> = [
     
 ];
 let updateTimeout: any = null;
+
+const afterSettingChangedHooks: Array<() => void> = [];
+
+/**
+ * 注册设置项保存后执行的回调，用于让设置变更立即作用到已打开的文档
+ * 由调用方注册，避免 settingManager 反向依赖事件与面包屑模块
+ */
+export function addAfterSettingChangedHook(hook: () => void) {
+    afterSettingChangedHooks.push(hook);
+}
 
 
 /**
@@ -65,7 +77,7 @@ export function initSettingProperty() {
                 new ConfigProperty({"key": "showRoot", "type": "SWITCH"}),
                 new ConfigProperty({"key": "oneLineBreadcrumb", "type": "SWITCH"}),
                 new ConfigProperty({"key": "hideNativeBreadcrumb", "type": "SWITCH"}),
-                new ConfigProperty({"key": "applyForMobileSystem", "type": "SWITCH"}),
+                new ConfigProperty({"key": "applyForMobileSystem", "type": "SELECT", "options": ["0", "1", "2"]}),
                 new ConfigProperty({"key": "usePluginArrow", "type": "SWITCH"}),
                 new ConfigProperty({"key": "icon", "type": "SELECT", "options": ["0", "1", "2"]}),
                 new ConfigProperty({"key": "breadcrumbNameMaxLength", "type": "NUMBER", "min": 0, "max": 40}),
@@ -136,13 +148,8 @@ export async function loadSettings() {
             loadResult = defaultSetting;
         }
     }
-    const currentVersion = 20260301;
     let saveItNowFlag = false;
-    if (!loadResult["@version"] || loadResult["@version"] < currentVersion) {
-        // 旧版本
-        loadResult["@version"] = currentVersion;
-        
-    }
+    loadResult = applyMobileModeMigration(loadResult);
     // showOutdatedSettingWarnDialog(checkOutdatedSettings(loadResult), defaultSetting);
     // 检查选项类设置项，如果发现不在列表中的，重置为默认
     try {
@@ -173,6 +180,9 @@ export async function loadSettings() {
                 saveSettings(checkedData);
                 // logPush("保存设置项", newVal);
                 setStyle();
+                for (const hook of afterSettingChangedHooks) {
+                    hook();
+                }
                 changeDebug(checkedData);
             } catch(err) {
                 logPush("设置项检查时发生错误", err);
@@ -302,9 +312,38 @@ async function transferOldSetting() {
             delete newSetting[key];
         }
     }
+    // 先迁移再合并默认值：默认值中的 @version 会使迁移闸门失效
+    newSetting = applyMobileModeMigration(newSetting);
     newSetting = Object.assign(Object.assign({}, defaultSetting), newSetting);
-    
+
     return newSetting;
+}
+
+/**
+ * 将旧版本的布尔型移动端设置项迁移为三态字符串
+ * 由 @version 闸门保证只执行一次
+ */
+function applyMobileModeMigration(loadResult: any): any {
+    if (loadResult["@version"] >= SETTING_VERSION) {
+        return loadResult;
+    }
+
+    loadResult["applyForMobileSystem"] = migrateMobileModeValue(loadResult["applyForMobileSystem"]);
+    loadResult["@version"] = SETTING_VERSION;
+
+    return loadResult;
+}
+
+function migrateMobileModeValue(oldValue: any): string {
+    if (typeof oldValue === "string") {
+        return oldValue;
+    }
+    if (oldValue === false) {
+        return CONSTANTS.MOBILE_MODE_DISABLED;
+    }
+
+    // 旧版 true 与缺失、脏值均视为沿用默认值，落到当前默认策略（仅安卓）
+    return CONSTANTS.MOBILE_MODE_ANDROID_ONLY;
 }
 
 export function getGSettings() {

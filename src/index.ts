@@ -10,7 +10,7 @@ import { createApp } from "vue";
 import settingVue from "./components/settings/setting.vue";
 import { setLanguage } from "./utils/lang";
 import { debugPush, errorPush, logPush } from "./logger";
-import { initSettingProperty } from './manager/settingManager';
+import { addAfterSettingChangedHook, initSettingProperty } from './manager/settingManager';
 import { setPluginInstance } from "./utils/getInstance";
 import { loadSettings } from "./manager/settingManager";
 import EventHandler from "./manager/eventHandler";
@@ -41,6 +41,10 @@ export default class FakeDocBreadcrumbPlugin extends Plugin {
     }
 
     onLayoutReady(): void {
+        addAfterSettingChangedHook(() => {
+            this.myEventHandler.getBreadcrumbManager().refreshAllOpenDocs();
+        });
+
         loadSettings().then(() => {
             this.myEventHandler.bindHandler();
             setStyle();
@@ -58,6 +62,8 @@ export default class FakeDocBreadcrumbPlugin extends Plugin {
         // 移除所有已经插入的面包屑
         document.querySelectorAll(`.${CONSTANTS.CONTAINER_CLASS_NAME}`).forEach((elem) => elem.remove());
         document.querySelectorAll(`.og-breadcrumb-oneline-divider`).forEach((elem) => elem.remove());
+        // 移动端相邻文档按钮不带容器类名，需按移动端标记单独清理
+        document.querySelectorAll(`[${CONSTANTS.MOBILE_MARKER_ATTR}]`).forEach((elem) => elem.remove());
         // 移除块面包屑菜单标记
         document.querySelectorAll(`[data-og-fdb-added-el]`).forEach((elem) => {
             elem.removeAttribute("data-og-fdb-added-el");

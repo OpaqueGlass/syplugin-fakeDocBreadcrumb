@@ -7,13 +7,14 @@
 import { CONSTANTS } from "@/constants";
 import { debugPush, errorPush, logPush, warnPush } from "@/logger";
 import { getReadOnlyGSettings } from "@/manager/settingManager";
-import { isValidStr } from "@/utils/commonCheck";
+import { isMobileBreadcrumbEnabled, isValidStr } from "@/utils/commonCheck";
 import { isNotebookDoc, isNotebookDocEnabled, getListDocsByPathAPIFilePath } from "@/utils/compatUtils";
 import { escapeHTML, stripHTML } from "@/utils/onlyThisUtil";
 import { getNotebookInfoLocallyF, getHPathById, getDocInfo, isMobile, getDocOutlineAPI, getCurrentDocIdF } from "@/syapi";
 import { BreadcrumbProvider } from "@/provider/BreadcrumbProvider";
 import { AdjacentDocProvider } from "@/provider/AdjacentDocProvider";
 import { ApplierFactory } from "@/applier/ApplierFactory";
+import { MobileApplier } from "@/applier/MobileApplier";
 import { clearMenuInstance, saveMenuInstance } from "@/worker/menuHelper";
 import { getPluginInstance } from "@/utils/getInstance";
 import * as siyuan from "siyuan";
@@ -37,7 +38,8 @@ export class BreadcrumbManager {
      * 主流程（原 main 函数）
      */
     async processProtyle(protyle: any): Promise<void> {
-        if (isMobile() && !getReadOnlyGSettings().applyForMobileSystem) {
+        if (isMobile() && !isMobileBreadcrumbEnabled(getReadOnlyGSettings())) {
+            MobileApplier.removeMobileArtifacts(protyle.element);
             debugPush("移动端未启用，插件停止支持移动端");
             return;
         }

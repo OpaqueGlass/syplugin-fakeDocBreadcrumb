@@ -27,6 +27,11 @@ export class CONSTANTS {
     public static readonly ADJ_SAME_PARENT = "1";
     public static readonly ADJ_SAME_LEVEL = "2";
 
+    // 移动端模式（设置项 applyForMobileSystem）
+    public static readonly MOBILE_MODE_DISABLED = "0";
+    public static readonly MOBILE_MODE_ANDROID_ONLY = "1";
+    public static readonly MOBILE_MODE_ALL_MOBILE = "2";
+
     // 移动端
     public static readonly MOBILE_MENU_ID = "og-fdb-mobile-menu";
     public static readonly MOBILE_CONTAINER_CLASS = "og-fdb-mobile-button";
